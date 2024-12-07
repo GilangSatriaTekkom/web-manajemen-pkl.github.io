@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'asal_sekolah'
     ];
 
     /**
@@ -44,5 +45,12 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function projects()
+    {
+        return $this->belongsToMany(Project::class, 'projects_users', 'user_id', 'project_id')
+            ->withPivot('creator_project') // Kolom tambahan di tabel pivot
+            ->withTimestamps(); // Untuk mencatat created_at dan updated_at
     }
 }
