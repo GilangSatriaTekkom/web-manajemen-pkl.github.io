@@ -6,12 +6,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\CardController;
+use App\Http\Controllers\TaskController;
 
-
-Route::get('/', function () {
-    // return view('welcome');
-    return view('auth.login');
-});
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -32,4 +28,9 @@ Route::get('/search-users', [SearchController::class, 'searchParticipants']);
 
 Route::middleware(['auth'])->get('/profile', [UserController::class, 'index'])->name('profile');
 
-Route::post('/add-card', [CardController::class, 'store'])->name('add.card');
+Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+Route::post('/tasks', [TaskController::class, 'store'])->name('tasks.store');
+
+Route::get('/project/{projectId}/tasks/{taskId}/data', [TaskController::class, 'getTaskData'])->name('task.data');
+
+Route::post('/tasks/{currentTaskId}/comments', [TaskController::class, 'addComment'])->name('task.addComment');

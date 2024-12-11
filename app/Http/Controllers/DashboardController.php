@@ -11,6 +11,12 @@ class DashboardController extends Controller
 {
     public function dashboard()
     {
+        // Check if user is authenticated
+        if (!auth()->check()) {
+            // Redirect to login page if not authenticated
+            return redirect()->route('login')->with('error', 'Please log in to access the dashboard');
+        }
+
         $user = auth()->user();
 
         $projects = Project::whereHas('participants', function ($query) use ($user) {
@@ -21,7 +27,6 @@ class DashboardController extends Controller
             $query->where('creator_project', $user->id);
         })
         ->get(); // Mengambil Collection dari proyek
-
 
         $projects = collect($projects);
         // Kirim data proyek ke tampilan

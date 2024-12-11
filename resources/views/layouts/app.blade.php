@@ -14,7 +14,12 @@
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+     <!-- CSS Quill -->
+     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
+     <!-- JavaScript Quill -->
+     <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+    <script defer src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/popup.js'])
 </head>
@@ -51,7 +56,6 @@
             </div>
         </header>
 
-
         <!-- Modal Popup -->
         <div id="create-project-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
             <div class="bg-white rounded-lg shadow-lg w-1/3">
@@ -84,8 +88,6 @@
                         Assign Project
                     </button>
                 </form>
-
-
             </div>
         </div>
 
@@ -94,16 +96,16 @@
         </main>
     </div>
 
-    <script>
-        document.querySelector('form').addEventListener('submit', function(event) {
-            event.preventDefault(); // Mencegah submit untuk sementara waktu
-            const formData = new FormData(this);
-            for (let [key, value] of formData.entries()) {
-                console.log(`${key}: ${value}`);
-            }
-            this.submit(); // Melanjutkan submit setelah pengecekan
-        });
-    </script>
+<script>
+    document.querySelector('form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Mencegah submit untuk sementara waktu
+        const formData = new FormData(this);
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+        this.submit(); // Melanjutkan submit setelah pengecekan
+    });
+</script>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
