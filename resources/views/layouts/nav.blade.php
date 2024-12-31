@@ -1,5 +1,5 @@
 <header class="bg-blue-600 p-4 text-white flex items-center justify-between">
-    <div class="text-lg font-semibold">Trello Clone</div>
+    <div class="text-lg font-semibold">Pkl Manajement Project</div>
     <div class="flex items-center space-x-4">
         <button class="bg-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-800">Home</button>
         <button class="bg-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-800">Boards</button>

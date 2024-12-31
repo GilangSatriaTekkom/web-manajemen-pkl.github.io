@@ -1,6 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        @apply font-plusjakarta;
+    }
+}
 
 /* Styling untuk tombol exit */
 .exit-button {
@@ -46,4 +54,36 @@
     margin: 50px auto;
     width: 80%;
     max-width: 500px;
+}
+
+/*
+ * FilePond Custom Styles
+ */
+
+.filepond--drop-label {
+    color: #4c4e53;
+}
+
+.filepond--label-action {
+    text-decoration-color: #babdc0;
+}
+
+.filepond--panel-root {
+    background-color: #edf0f4;
+}
+
+/**
+ * Page Styles
+ */
+
+.filepond--root {
+    width: 170px;
+}
+
+.color-primary {
+    color: #546fff;
+}
+
+.bg-color-primary {
+    background-color: #546fff;
 }

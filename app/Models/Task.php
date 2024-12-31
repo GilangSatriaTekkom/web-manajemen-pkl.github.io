@@ -16,6 +16,8 @@ class Task extends Model
         'project_id',
         'comment_id',
         'description_id',
+        'created_by',
+        'worked_by',
     ];
 
     // Relasi ke Board
@@ -40,5 +42,10 @@ class Task extends Model
     public function description()
     {
         return $this->belongsTo(Description::class);
+    }
+
+    public function workedBy()
+    {
+        return $this->belongsTo(User::class, 'worked_by');
     }
 }

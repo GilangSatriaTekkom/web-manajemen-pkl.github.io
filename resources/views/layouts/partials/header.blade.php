@@ -1,91 +1,46 @@
-<!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <header class=" p-4 text-black flex items-center justify-end {{ request()->is('login', 'register') ? 'hidden' : '' }}">
+        <div class="flex items-center space-x-4">
+            @auth
+                @if (Auth::user()->roles === 'admin')
+                    <!-- Menampilkan tautan hanya untuk admin -->
+                    <a href="{{ route('report.index') }}"
+                        class="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800">
+                        Report
+                    </a>
+                @endif
+                @if (Auth::user()->roles === 'admin' || Auth::user()->roles === 'pembimbing')
+                    <!-- Tombol +Create dengan Checkbox -->
+                    <button id="open-modal-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                        +Create
+                    </button>
+                @endif
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+                <!-- Dropdown User -->
+                <div class="relative">
+                    <input type="checkbox" id="user-menu-toggle" class="hidden peer" />
+                    <label for="user-menu-toggle" class="flex items-center cursor-pointer">
+                        <img class="w-14 h-14 rounded-full" src="{{ asset('storage/' . Auth::user()->profile_pict) }}" alt="">
+                    </label>
 
-    <!-- CSRF Token -->
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    <title>{{ config('app.name', 'Laravel') }}</title>
-
-    <!-- Fonts -->
-    <link rel="dns-prefetch" href="//fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- CSS Quill -->
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-
-    <!-- JavaScript Quill -->
-    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
-    <script defer src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-
-    <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
-
-    <script defer src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
-
-
-    <!-- Scripts -->
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/popup.js'])
-</head>
-
-<body>
-    @php
-        $currentUrl = url()->current();
-        $loginUrl = url('login');
-        $registerUrl = url('register');
-    @endphp
-    <div id="app" class="{{ request()->is('login', 'register') ? 'bg-color-primary' : '' }} h-screen font-plusjakarta">
-        {{-- <header class="bg-blue-600 p-4 text-white flex items-center justify-between {{ request()->is('login', 'register') ? 'hidden' : '' }}">
-            <a href="http://127.0.0.1:8000/dashboard">
-                <div class="text-lg font-semibold">Pkl Manajement Project</div>
-            </a>
-            <div class="flex items-center space-x-4">
-                @auth
-                    @if (Auth::user()->roles === 'admin')
-                        <!-- Menampilkan tautan hanya untuk admin -->
-                        <a href="{{ route('report.index') }}"
-                            class="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800">
-                            Report
-                        </a>
-                    @endif
-                    @if (Auth::user()->roles === 'admin' || Auth::user()->roles === 'pembimbing')
-                        <!-- Tombol +Create dengan Checkbox -->
-                        <button id="open-modal-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                            +Create
-                        </button>
-                    @endif
-
-                    <!-- Dropdown User -->
-                    <div class="relative">
-                        <input type="checkbox" id="user-menu-toggle" class="hidden peer" />
-                        <label for="user-menu-toggle"
-                            class="bg-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-800 cursor-pointer">
-                            {{ Auth::user()->name }} ▾
-                        </label>
-                        <div
-                            class="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded shadow-lg hidden peer-checked:block"
-                            id="user-menu">
-                            <a href="{{ route('profile', ['id' => Auth::id()]) }}" class="block px-4 py-2 hover:bg-gray-100">Profile</a>
-                            <form method="POST" action="{{ route('logout') }}" class="block">
-                                @csrf
-                                <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
-                            </form>
-                        </div>
+                    <div
+                        class="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded shadow-lg hidden peer-checked:block"
+                        id="user-menu">
+                        <a href="{{ route('profile', ['id' => Auth::id()]) }}" class="block px-4 py-2 hover:bg-gray-100">Profile</a>
+                        <form method="POST" action="{{ route('logout') }}" class="block">
+                            @csrf
+                            <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
+                        </form>
                     </div>
+                </div>
 
-                @else
-                    <a href="{{ route('login') }}" class="bg-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-800">Login</a>
-                @endauth
-            </div>
-        </header> --}}
+            @else
+                <a href="{{ route('login') }}" class="bg-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-800">Login</a>
+            @endauth
+        </div>
+    </header>
 
-
-        <!-- Modal Popup -->
-        <div id="create-project-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+         <!-- Modal Popup -->
+         <div id="create-project-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
             <div class="bg-white rounded-lg shadow-lg w-1/3">
                 <div class="p-4 border-b">
                     <h3 class="text-lg font-semibold">Create Project</h3>
@@ -121,25 +76,20 @@
             </div>
         </div>
 
-        <main class="">
-            @yield('content')
-        </main>
-    </div>
+        <script>
+            // Ambil elemen checkbox dan menu
+            const toggleMenu = document.getElementById("user-menu-toggle");
+            const userMenu = document.getElementById("user-menu");
 
-    <script>
-        // Ambil elemen checkbox dan menu
-        const toggleMenu = document.getElementById("user-menu-toggle");
-        const userMenu = document.getElementById("user-menu");
-
-        // Menambahkan event listener untuk klik di luar modal
-        document.addEventListener("click", function(event) {
-            // Cek jika klik terjadi di luar area dropdown
-            if (!userMenu.contains(event.target) && event.target !== toggleMenu) {
-                // Matikan checkbox jika klik di luar dropdown
-                toggleMenu.checked = false;
-            }
-        });
-    </script>
+            // Menambahkan event listener untuk klik di luar modal
+            document.addEventListener("click", function(event) {
+                // Cek jika klik terjadi di luar area dropdown
+                if (!userMenu.contains(event.target) && event.target !== toggleMenu) {
+                    // Matikan checkbox jika klik di luar dropdown
+                    toggleMenu.checked = false;
+                }
+            });
+        </script>
 
     <script>
         document.querySelector('form').addEventListener('submit', function(event) {
@@ -247,7 +197,3 @@
             document.getElementById('selected-participants').value = JSON.stringify(selectedParticipants);
         });
     </script>
-
-</body>
-
-</html>

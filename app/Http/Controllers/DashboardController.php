@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Project;
+use App\Models\ProjectUser;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
 
 class DashboardController extends Controller
 {
@@ -13,25 +17,58 @@ class DashboardController extends Controller
     {
         // Check if user is authenticated
         if (!auth()->check()) {
-            // Redirect to login page if not authenticated
             return redirect()->route('login')->with('error', 'Please log in to access the dashboard');
         }
 
         $user = auth()->user();
 
-        $projects = Project::whereHas('participants', function ($query) use ($user) {
-            // Kondisi pertama: memeriksa user_id di tabel participants
+        $projectsFromParticipants = Project::whereHas('participants', function ($query) use ($user) {
             $query->where('user_id', $user->id);
-        })->orWhereHas('participants', function ($query) use ($user) {
-            // Memeriksa creator_project di tabel pivot
-            $query->where('creator_project', $user->id);
-        })
-        ->get(); // Mengambil Collection dari proyek
+        })->with(['projectCreators', 'participants'])->get();
 
-        $projects = collect($projects);
-        // Kirim data proyek ke tampilan
-        return view('layouts.dashboard', compact('projects'));
+        $projectsFromCreator = Project::whereHas('projectCreators', function ($query) use ($user) {
+            $query->where('creator_project', $user->id);
+        })->with(['projectCreators'])->get();
+
+        $projects = $projectsFromParticipants->merge($projectsFromCreator);
+
+
+
+        $creatorProjects = $projectsFromCreator->flatMap(function ($project) {
+            return $project->projectCreators->map(function ($creator) {
+                return $creator->pivot->creator_project;
+            });
+        });
+
+        $userNames = User::whereIn('id', $creatorProjects)->pluck('name');
+        $userName = $userNames->first();
+
+         // Ambil gambar peserta untuk setiap proyek
+        $projectParticipants = $projects->flatMap(function ($project) {
+            return $project->participants->map(function ($participant) use ($project) {
+                // dd($participant->name);
+                return [
+                    'project_id' => $project->id,
+                    'project_name' => $project->name ?? 'Unknown Project',
+                    'participants' => $project->participants->map(function ($participant) {
+                        return [
+                            'id' => $participant->id ?? null,
+                            'name' => $participant->name ?? 'Unknown',
+                            'profile_image' => $participant->profile_pict
+                                ? asset('storage/' . $participant->profile_pict)
+                                : asset('images/default-profile.png'),
+                        ];
+                    })->toArray(),
+                ];
+            });
+        })->unique('project_id')->values();
+        // dd($projectParticipants);
+
+
+        return view('layouts.dashboard',['projectParticipants' => $projectParticipants], compact('projects', 'userName', 'creatorProjects'));
     }
+
+
 
     public function assignProject(Request $request)
     {
@@ -74,6 +111,30 @@ class DashboardController extends Controller
         // Redirect ke halaman proyek yang baru saja dibuat
         return redirect()->route('project.show', ['id' => $project->id]);
     }
+
+
+    public function showParticipants($id)
+    {
+        $projects = Project::find($id);
+
+        if (!$projects) {
+            return redirect()->route('some.fallback.route')->with('error', 'Project not found.');
+        }
+
+
+        $participants = $projects->participants()->select('users.id', 'users.name', 'users.profile_pict')->get();
+
+
+        return response()->json([
+            'participants' => $participants
+        ]);
+    }
+
+    public function storeParticipants(Request $request, $id)
+    {
+
+    }
+
 
 
 }

@@ -20,9 +20,16 @@ class Project extends Model
             ->withTimestamps(); // Untuk mencatat created_at dan updated_at
     }
 
-    public function projectUser()
+    public function projectCreators()
     {
-        // Assuming 'user_id' is the foreign key in the 'projects' table
-        return $this->belongsTo(User::class, 'creator_project', 'id');
+        return $this->belongsToMany(User::class, 'projects_users')
+                    ->withPivot('creator_project')
+                    ->wherePivot('creator_project', '!=', null); // Hanya untuk creator_project
     }
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class)->withPivot('creator_project');
+    }
+
 }
