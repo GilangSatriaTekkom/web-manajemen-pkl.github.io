@@ -40,8 +40,8 @@ class DashboardController extends Controller
             });
         });
 
-        $userNames = User::whereIn('id', $creatorProjects)->pluck('name');
-        $userName = $userNames->first();
+        $userNames = User::whereIn('id', $creatorProjects)->pluck('profile_pict');
+        $creatorPict = $userNames->first();
 
          // Ambil gambar peserta untuk setiap proyek
         $projectParticipants = $projects->flatMap(function ($project) {
@@ -65,7 +65,7 @@ class DashboardController extends Controller
         // dd($projectParticipants);
 
 
-        return view('layouts.dashboard',['projectParticipants' => $projectParticipants], compact('projects', 'userName', 'creatorProjects'));
+        return view('layouts.dashboard',['projectParticipants' => $projectParticipants], compact('projects', 'creatorPict', 'creatorProjects'));
     }
 
 

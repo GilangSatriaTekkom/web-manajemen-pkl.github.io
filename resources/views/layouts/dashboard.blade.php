@@ -1,156 +1,145 @@
 <!-- resources/views/dashboard.blade.php -->
 <div class="flex flex-row">
-
     <div>
-
         @extends('layouts.app')
         @section('content')
-
-        <div class="flex flex-row h-full">
+        <div class="flex flex-row">
             @include('layouts.partials.sidebar')
-            <div class="container mt-4">
+            <div class="w-full ml-64">
                 @include('layouts.partials.header')
-                <div class="flex flex-row justify-between">
-                <h1 class="text-2xl font-bold mb-4">Daftar Project</h1>
-                @if (Auth::user()->roles === 'admin' || Auth::user()->roles === 'pembimbing')
-                    <!-- Tombol +Create dengan Checkbox -->
-                    <button id="open-modal-btn" class="px-5 py-3 bg-[#0A0A18] text-white rounded hover:bg-green-700">
-                        + Create Project
-                    </button>
-                @endif
+                <div class="flex flex-row justify-between px-4">
+                    <div class="pr-4 pl-2 py-2 border border-gray-300 rounded-md w-full max-w-[480px] flex flex-row items-center gap-3">
+                        <input type="text" id="search-input" placeholder="Search..." class="border-none w-full">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <g clip-path="url(#clip0_2207_4271)">
+                            <path d="M9.58268 17.5C13.9549 17.5 17.4993 13.9556 17.4993 9.58335C17.4993 5.2111 13.9549 1.66669 9.58268 1.66669C5.21043 1.66669 1.66602 5.2111 1.66602 9.58335C1.66602 13.9556 5.21043 17.5 9.58268 17.5Z" stroke="#8E92BC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M18.3327 18.3333L16.666 16.6666" stroke="#8E92BC" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </g>
+                            <defs>
+                            <clipPath id="clip0_2207_4271">
+                            <rect width="20" height="20" fill="white"/>
+                            </clipPath>
+                            </defs>
+                            </svg>
+
+                    </div>
+
+                    @if (Auth::user()->roles === 'admin' || Auth::user()->roles === 'pembimbing')
+                        <!-- Tombol +Create dengan Checkbox -->
+                        <button id="open-modal-btn" class="px-[24px] py-[12px] rounded-full bg-[#0A0A18] text-white hover:bg-[#54577A]">
+                            + Create Project
+                        </button>
+                    @endif
+
+                        <div id="create-project-modal" class="fixed inset-0 z-10 bg-black bg-opacity-50 hidden items-center justify-center" style="z-index: 10;">
+                            <div class="bg-white rounded-lg shadow-lg w-1/3">
+                                <div class="p-4 border-b">
+                                    <h3 class="text-lg font-semibold">Create Project</h3>
+                                </div>
+                                <form method="POST" action="{{ route('assign-project') }}" class="p-4 scroll-auto">
+                                    @csrf
+                                    <div class="mb-4">
+                                        <label for="project-name" class="block text-sm font-medium text-gray-700">Project Name</label>
+                                        <input type="text" name="name" id="project-name" required
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="search-users" class="block text-sm font-medium text-gray-700">Search Peserta
+                                            PKL</label>
+                                        <input type="text" id="search-users" placeholder="Cari peserta PKL..."
+                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                        {{--    ID peserta:   --}}
+                                        <input type="hidden" name="participants" id="participants">
+                                        {{--    End ID Peserta   --}}
+
+                                        <ul id="suggestions"
+                                            class="bg-white border border-gray-300 rounded-md mt-1 max-h-60 overflow-auto hidden"></ul>
+                                        <div id="selected-participants" class="mt-2 flex flex-wrap gap-2"></div>
+                                    </div>
+
+                                    <button type="button" id="close-modal-btn" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">
+                                        Cancel
+                                    </button>
+                                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                        Assign Project
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-4 mt-16">
+                <div class="grid grid-cols-3 gap-4 mt-16 px-4">
                     @foreach ($projects as $project)
-                    <div class="bg-white p-4 rounded shadow relative">
-                        <button class="absolute size-5 top-2 right-2 text-gray-500 hover:text-gray-700 focus:outline-none " onclick="toggleDropdown({{ $project->id }})">
-                            &#x22EE;
-                        </button>
+                    <div class="bg-white rounded shadow relative p-4">
+                         <button class="absolute size-5 top-2 right-2 text-gray-500 hover:text-gray-700 focus:outline-none " onclick="toggleDropdown({{ $project->id }})">
+                                &#x22EE;
+                            </button>
+                        <a class=" z-0" href="{{ route('project.show', $project->id) }}">
 
-                        <div id="dropdown-{{ $project->id }}" class="dropdown-project absolute right-0 mt-2 w-32 bg-white rounded shadow hidden">
-                            <ul class="text-sm text-gray-700">
-                                <li>
-                                    <button
-                                        onclick="openEditModal({{ json_encode($project) }})"
-                                        class="block px-4 py-2 hover:bg-gray-100 w-full text-left"
-                                    >
-                                        Edit
-                                    </button>
-                                </li>
-                                <li>
-                                    <form method="POST" action="{{ route('project.delete', $project->id) }}">
-                                        @csrf
-                                        @method('DELETE')
+
+                            <div id="dropdown-{{ $project->id }}" class="dropdown-project absolute right-0 mt-2 w-32 bg-white rounded shadow hidden">
+                                <ul class="text-sm text-gray-700">
+                                    <li>
                                         <button
-                                            type="submit"
-                                            class="block px-4 py-2 hover:bg-gray-100 w-full text-left text-red-500"
+                                            onclick="openEditModal({{ json_encode($project) }})"
+                                            class="block px-4 py-2 hover:bg-gray-100 w-full text-left"
                                         >
-                                            Hapus
+                                            Edit
                                         </button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
+                                    </li>
+                                    <li>
+                                        <form method="POST" action="{{ route('project.delete', $project->id) }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button
+                                                type="submit"
+                                                class="block px-4 py-2 hover:bg-gray-100 w-full text-left text-red-500"
+                                            >
+                                                Hapus
+                                            </button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
 
-                        <a href="{{ route('project.show', $project->id) }}">
+
                             <h2 class="text-xl font-semibold">
                                 {{ $project->name }}
                             </h2>
-                            <p>Created by:
-                                {{ $userName }}
-                            </p>
-                            <a href="javascript:void(0)" onclick="openModal('{{ $project->id }}')" class="flex items-center space-x-[-10px]">
-                                @foreach ($project['participants'] as $index => $participant)
+                            <p>{{ $project->genre }}</p>
+                            <div class="flex flex-row justify-between  items-center w-full">
+                                <p class="flex flex-row items-center">Created by:
+                                    <img class="w-[24px] h-[24px] rounded-full ml-1" src="{{ asset('storage/' . $creatorPict) }}" alt="">
+                                </p>
+                                <a href="javascript:void(0)" onclick="openModal('{{ $project->id }}')" class="flex items-center space-x-[-10px]">
+                                    @foreach ($project['participants'] as $index => $participant)
 
-                                    @if ($index < 5)
-                                        <!-- Gambar Profil -->
-                                        <div class="w-12 h-12 rounded-full border-2 border-white overflow-hidden">
-                                            <img src="{{ $participant['profile_image'] ? asset('storage/' . $participant->profile_pict) : asset('images/default-profile.png') }}" alt="Profile {{ $index + 1 }}" class="w-full h-full object-cover" />
-                                        </div>
-                                    @elseif ($index === 5)
-                                        <!-- Placeholder untuk peserta tambahan -->
-                                        <div class="w-12 h-12 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-sm font-semibold">
-                                            +{{ count($project['participants']) - 5 }}
-                                        </div>
-                                    @endif
-                                @endforeach
-                            </a>
-
+                                        @if ($index < 5)
+                                            <!-- Gambar Profil -->
+                                            <div class="w-[24px] h-[24px] rounded-full border-2 border-white overflow-hidden">
+                                                <img src="{{ $participant['profile_image'] ? asset('storage/' . $participant->profile_pict) : asset('images/default-profile.png') }}" alt="Profile {{ $index + 1 }}" class="w-full h-full object-cover" />
+                                            </div>
+                                        @elseif ($index === 5)
+                                            <!-- Placeholder untuk peserta tambahan -->
+                                            <div class="w-[24px] h-[24px] rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-sm font-semibold">
+                                                +{{ count($project['participants']) - 5 }}
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </a>
+                            </div>
                         </a>
                     </div>
                     @endforeach
 
-                    <!-- Modal Popup -->
-                    <div id="participantModal" class="fixed inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50 hidden">
-                        <div class="bg-white p-6 rounded-lg w-96 relative">
-                            <!-- Tombol X di pojok kanan atas untuk menutup modal -->
-                            <button onclick="closeModal()" class="absolute top-2 right-2 text-xl font-bold text-gray-600">
-                                &times;
-                            </button>
-
-                            <h3 class="text-lg font-semibold mb-4">Daftar Peserta</h3>
-                            <ul id="participantList" class="flex flex-col gap-3">
-                                <!-- Peserta akan dimasukkan di sini secara dinamis -->
-                            </ul>
-
-                            <!-- Tombol Tambah Peserta untuk admin atau pembimbing -->
-                            {{-- <div id="addParticipantButton">
-                                @if(isset($project) && $project->id)
-                                    <button
-                                        class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                        onclick="openEditModal('{{ $project->id }}')">
-                                        Tambah Peserta
-                                    </button>
-                                @else
-                                    <p class="text-gray-500">Tidak ada proyek yang tersedia.</p>
-                                @endif
-                            </div> --}}
-                        </div>
-                    </div>
-
-                    <div id="editModal-{{ $project->id }}" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center hidden">
-                        <div class="bg-white rounded-lg shadow-lg w-1/3 p-6">
-                            <h2 class="text-lg font-semibold mb-4">Tambah Peserta</h2>
-                            <form method="POST" action="{{ route('storeParticipants', ['project' => $project->id]) }}">
-                                @csrf
-                                <input type="hidden" name="project_id" value="{{ $project->id }}">
-                                <div class="mb-4">
-                                    <label for="user_name" class="block text-sm font-medium text-gray-700">Nama User</label>
-                                    <input
-                                        type="text"
-                                        id="user_name"
-                                        name="user_name"
-                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                        required
-                                    >
-                                </div>
-                                <div class="flex justify-end">
-                                    <button
-                                        type="button"
-                                        onclick="closeEditModal('{{ $project->id }}')"
-                                        class="mr-2 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-                                    >
-                                        Batal
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                    >
-                                        Simpan
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-
-
+                  @include('layouts.partials.participantModal')
             </div>
         </div>
         @endsection
     </div>
 
 </div>
+
 
 
 <script>
@@ -267,4 +256,112 @@
         });
         document.getElementById('edit-project-modal').classList.remove('hidden');
     }
+</script>
+
+
+<script>
+    document.querySelector('form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Mencegah submit untuk sementara waktu
+        const formData = new FormData(this);
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+        this.submit(); // Melanjutkan submit setelah pengecekan
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-users');
+        const suggestionsList = document.getElementById('suggestions');
+        const selectedParticipants = document.getElementById('selected-participants');
+        const participantsInput = document.getElementById('participants');
+
+        searchInput.addEventListener('input', function() {
+            const query = searchInput.value.trim();
+            if (query.length > 2) {
+                fetch(`/search-users?query=${query}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        suggestionsList.innerHTML = '';
+                        if (data.length > 0) {
+                            suggestionsList.classList.remove('hidden');
+                            data.forEach(user => {
+                                // Cek apakah user sudah ada di selected participants
+                                if (!isUserAlreadySelected(user.id)) {
+                                    const li = document.createElement('li');
+                                    li.textContent = `${user.name} || ${user.asal_sekolah}`;
+                                    li.classList.add('p-2', 'hover:bg-gray-100',
+                                        'cursor-pointer');
+                                    li.addEventListener('click', function() {
+                                        addParticipant(user.id, user.name, user
+                                            .asal_sekolah);
+                                        searchInput.value = '';
+                                        suggestionsList.classList.add('hidden');
+                                    });
+                                    suggestionsList.appendChild(li);
+                                }
+                            });
+                        } else {
+                            suggestionsList.classList.add('hidden');
+                        }
+                    });
+            } else {
+                suggestionsList.classList.add('hidden');
+            }
+        });
+
+        function isUserAlreadySelected(userId) {
+            return document.querySelector(`input[value="${userId}"]`) !== null;
+        }
+
+        function addParticipant(id, name, asal_sekolah) {
+            // Menambahkan peserta yang dipilih ke kontainer
+            const participantDiv = document.createElement('div');
+            participantDiv.classList.add('bg-gray-200', 'p-2', 'rounded', 'flex', 'items-center', 'gap-2');
+
+            const participantText = document.createElement('span');
+            participantText.textContent = `${name} (${asal_sekolah})`;
+
+            const removeButton = document.createElement('button');
+            removeButton.textContent = 'Remove';
+            removeButton.classList.add('text-red-600');
+            removeButton.addEventListener('click', function() {
+                selectedParticipants.removeChild(participantDiv);
+                removeParticipantId(id); // Hapus ID dari input hidden
+            });
+
+            participantDiv.appendChild(participantText);
+            participantDiv.appendChild(removeButton);
+            selectedParticipants.appendChild(participantDiv);
+
+            addParticipantId(id); // Tambahkan ID ke input tersembunyi
+        }
+
+        function addParticipantId(id) {
+            let currentParticipants = participantsInput.value ? JSON.parse(participantsInput.value) : [];
+            currentParticipants.push(id);
+            participantsInput.value = JSON.stringify(currentParticipants);
+        }
+
+        function removeParticipantId(id) {
+            let currentParticipants = participantsInput.value ? JSON.parse(participantsInput.value) : [];
+            currentParticipants = currentParticipants.filter(participantId => participantId !== id);
+            participantsInput.value = JSON.stringify(currentParticipants);
+        }
+
+
+
+    });
+</script>
+
+<script>
+    // Memasukkan teks editor ke dalam input hidden sebelum submit
+    document.querySelector('form').addEventListener('submit', function() {
+        document.getElementById('project-description').value = document.getElementById('editor').innerText;
+        // Masukkan data peserta yang dipilih ke input hidden
+        const selectedParticipants = Array.from(document.querySelectorAll('#selected-participants span'))
+            .map(participant => participant.dataset.userId);
+        document.getElementById('selected-participants').value = JSON.stringify(selectedParticipants);
+    });
 </script>

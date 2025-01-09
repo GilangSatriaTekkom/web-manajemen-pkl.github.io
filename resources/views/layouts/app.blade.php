@@ -85,7 +85,7 @@
 
 
         <!-- Modal Popup -->
-        <div id="create-project-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
+        <div id="create-project-modal" class="fixed z-20 inset-0 bg-black bg-opacity-50 hidden items-center justify-center">
             <div class="bg-white rounded-lg shadow-lg w-1/3">
                 <div class="p-4 border-b">
                     <h3 class="text-lg font-semibold">Create Project</h3>

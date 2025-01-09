@@ -21,8 +21,14 @@ use Illuminate\Support\Facades\Log;
 class TaskController extends Controller
 {
 
-    public function getTaskData($projectId, $taskId)
+    public function getTaskData(Request $request, $projectId, $taskId)
     {
+
+
+        // Cek jika permintaan bukan AJAX
+        if (!$request->ajax()) {
+            return redirect("/project/{$projectId}/");
+        }
 
         // Memastikan taskId adalah numerik
         if (!is_numeric($taskId)) {
@@ -65,9 +71,6 @@ class TaskController extends Controller
                 }
                 return $comment; // Penting: kembalikan elemen yang telah dimodifikasi
             });
-
-
-
 
 
             // Mengembalikan data dalam format JSON
@@ -186,96 +189,91 @@ class TaskController extends Controller
 
 
     public function updateBoard(Request $request)
-{
-    $user = auth()->id();
-    // Validasi request untuk task_id dan board_id
-    $validated = $request->validate([
-        'task_id' => 'required|exists:tasks,id',
-    ]);
-
-    $task = Task::find($validated['task_id']);
-
-    if ($task) {
-        // Simpan nilai board_id sebelumnya untuk log dan respon
-        $oldBoardId = $task->board_id;
-
-        \Log::info('Before Update: ', ['task_id' => $task->id, 'board_id' => $oldBoardId]);
-
-        // Logika perubahan board_id dan update status task
-        switch ($oldBoardId) {
-            case 1: // In Progress
-                $task->board_id = 2;
-                $task->status = 'in_progress'; // Mengupdate status ke 'in_progress'
-                Task::where('id', $validated['task_id'])
-                    ->update(['worked_by' => $user]);
-                break;
-
-            case 2: // Done
-                $task->board_id = 3;
-                $task->status = 'done'; // Mengupdate status ke 'done'
-
-                $projectName = Project::where('id', $task->project_id)->first();
-                $workedByUser = User::where('id', $task->worked_by)->first();
-
-                // Buat entri baru di tabel Report
-                $updateReport = Report::create([
-                    'project_name' => $projectName->name,
-                    'task_name' => $task->title, // Ambil title dari task
-                    'status' => 'done', // Status baru
-                    'time' => now(), // Waktu saat ini
-                    'worked_by' => $workedByUser->name,
-                ]);
-
-                break;
-
-            default:
-                // Jika board_id tidak valid, kembalikan dengan error
-                return response()->json([
-                    'message' => 'Invalid board_id',
-                    'success' => false,
-                    'error' => 'The provided board_id is not valid.',
-                ], 400);
-        }
-
-        // Simpan perubahan pada task
-        $task->save();
-
-        \Log::info('After Update: ', [
-            'task_id' => $task->id,
-            'old_board_id' => $oldBoardId,
-            'new_board_id' => $task->board_id,
-            'new_status' => $task->status,
+    {
+        $user = auth()->id();
+        // Validasi request untuk task_id dan board_id
+        $validated = $request->validate([
+            'task_id' => 'required|exists:tasks,id',
         ]);
 
-        // Respon sukses dengan informasi tambahan
-        return response()->json([
-            'message' => 'Task updated successfully',
-            'success' => true,
-            'task' => [
-                'id' => $task->id,
-                'title' => $task->title,
+        $task = Task::find($validated['task_id']);
+
+        if ($task) {
+            // Simpan nilai board_id sebelumnya untuk log dan respon
+            $oldBoardId = $task->board_id;
+
+            \Log::info('Before Update: ', ['task_id' => $task->id, 'board_id' => $oldBoardId]);
+
+            // Logika perubahan board_id dan update status task
+            switch ($oldBoardId) {
+                case 1: // In Progress
+                    $task->board_id = 2;
+                    $task->status = 'in_progress'; // Mengupdate status ke 'in_progress'
+                    Task::where('id', $validated['task_id'])
+                        ->update(['worked_by' => $user]);
+                    break;
+
+                case 2: // Done
+                    $task->board_id = 3;
+                    $task->status = 'done'; // Mengupdate status ke 'done'
+
+                    $projectName = Project::where('id', $task->project_id)->first();
+                    $workedByUser = User::where('id', $task->worked_by)->first();
+
+                    // Buat entri baru di tabel Report
+                    $updateReport = Report::create([
+                        'project_name' => $projectName->name,
+                        'task_name' => $task->title, // Ambil title dari task
+                        'status' => 'done', // Status baru
+                        'time' => now(), // Waktu saat ini
+                        'worked_by' => $workedByUser->name,
+                    ]);
+
+                    break;
+
+                default:
+                    // Jika board_id tidak valid, kembalikan dengan error
+                    return response()->json([
+                        'message' => 'Invalid board_id',
+                        'success' => false,
+                        'error' => 'The provided board_id is not valid.',
+                    ], 400);
+            }
+
+            // Simpan perubahan pada task
+            $task->save();
+
+            \Log::info('After Update: ', [
+                'task_id' => $task->id,
                 'old_board_id' => $oldBoardId,
                 'new_board_id' => $task->board_id,
                 'new_status' => $task->status,
+            ]);
+
+            // Respon sukses dengan informasi tambahan
+            return response()->json([
+                'message' => 'Task updated successfully',
+                'success' => true,
+                'task' => [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'old_board_id' => $oldBoardId,
+                    'new_board_id' => $task->board_id,
+                    'new_status' => $task->status,
+                ],
+            ]);
+        }
+
+        // Respon error jika task tidak ditemukan
+        \Log::error('Task not found: ', ['task_id' => $validated['task_id']]);
+        return response()->json([
+            'message' => 'Task not found',
+            'success' => false,
+            'error' => [
+                'task_id' => $validated['task_id'],
+                'reason' => 'Task does not exist or already deleted.',
             ],
-        ]);
+        ], 404);
     }
-
-    // Respon error jika task tidak ditemukan
-    \Log::error('Task not found: ', ['task_id' => $validated['task_id']]);
-    return response()->json([
-        'message' => 'Task not found',
-        'success' => false,
-        'error' => [
-            'task_id' => $validated['task_id'],
-            'reason' => 'Task does not exist or already deleted.',
-        ],
-    ], 404);
-}
-
-
-
-
-
 
 }

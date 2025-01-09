@@ -8,6 +8,7 @@ import { comment } from "postcss";
 import "flowbite";
 
 window.globalTaskId = null;
+
 document.addEventListener("DOMContentLoaded", function () {
     let currentTaskId = null;
     // Pastikan modal sudah ada
@@ -41,6 +42,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 clearAssignedTo();
                 taskPopup.classList.add("hidden");
                 history.back(); // Kembali ke halaman sebelumnya
+
+                const attachmentsContainer =
+                    document.getElementById("attachments");
+                // Reset kontainer lampiran
+                attachmentsContainer.innerHTML = ""; // Menghapus semua elemen di dalam kontainer
             }
         });
     } else {
@@ -53,6 +59,10 @@ document.addEventListener("DOMContentLoaded", function () {
             taskPopup.classList.add("hidden");
             history.back(); // Kembali ke halaman sebelumnya
             clearAssignedTo();
+
+            const attachmentsContainer = document.getElementById("attachments");
+            // Reset kontainer lampiran
+            attachmentsContainer.innerHTML = ""; // Menghapus semua elemen di dalam kontainer
         });
     } else {
         console.error("Exit button not found");
@@ -85,9 +95,17 @@ document.addEventListener("DOMContentLoaded", function () {
                     readOnly: true, // Hanya untuk membaca
                 });
 
-                // Mengisi konten Quill editor dengan Delta dari task description
-                const delta = task.tasksDescription; // Asumsikan ini adalah format Delta
-                quill.setContents(delta);
+                const delta = task.tasksDescription.ops.filter(
+                    (op) => typeof op.insert === "string"
+                );
+
+                // Membuat Delta baru yang hanya berisi teks
+                const filteredDelta = {
+                    ops: delta,
+                };
+
+                // Mengisi konten Quill editor dengan Delta yang sudah difilter
+                quill.setContents(filteredDelta);
 
                 // Menampilkan modal hanya setelah data berhasil dimuat
                 taskPopup.classList.remove("hidden");
@@ -97,6 +115,104 @@ document.addEventListener("DOMContentLoaded", function () {
                     `/project/${projectId}/tasks/${taskId}/data`
                 ); // Update URL ke task yang dibuka
 
+                // Proses data untuk menampilkan attachment
+                const attachmentsContainer =
+                    document.getElementById("attachments");
+
+                const ops = task.tasksDescription.ops;
+
+                if (task && ops) {
+                    let imageWrapper = null;
+
+                    ops.forEach((item) => {
+                        // Cek jika ada gambar
+                        if (item.insert && item.insert.image) {
+                            // Jika belum ada wrapper gambar, buat wrapper baru
+                            if (!imageWrapper) {
+                                imageWrapper = document.createElement("div");
+                                imageWrapper.classList.add(
+                                    "attachment-card",
+                                    "p-4",
+                                    "mt-2",
+                                    "border",
+                                    "rounded-lg",
+                                    "shadow-md",
+                                    "flex",
+                                    "flex-row", // Flex row untuk gambar
+                                    "gap-2"
+                                );
+
+                                // Tambahkan wrapper ke dalam container utama
+                                attachmentsContainer.appendChild(imageWrapper);
+
+                                // Tambahkan judul "Image:" di atas wrapper
+                                const title = document.createElement("h5");
+                                title.classList.add(
+                                    "font-semibold",
+                                    "text-gray-800",
+                                    "mb-2"
+                                );
+                                title.innerText = "Image:";
+                                attachmentsContainer.insertBefore(
+                                    title,
+                                    imageWrapper
+                                );
+                            }
+
+                            // Membuat elemen gambar dan menambahkannya ke dalam div yang dapat diklik
+                            const imageLinkWrapper =
+                                document.createElement("div");
+                            imageLinkWrapper.classList.add("gap-2"); // Flex row untuk gambar
+
+                            const imageLink = document.createElement("a");
+                            // imageLink.href = item.insert.image; // Link untuk menampilkan gambar lebih besar
+                            imageLink.setAttribute("target", "_blank"); // Membuka gambar di tab baru
+                            imageLink.setAttribute(
+                                "onclick",
+                                `openModalImageDescription('${item.insert.image}')` // Panggil fungsi openModalImageDescription dengan parameter gambar
+                            );
+
+                            const imageElement = document.createElement("img");
+                            imageElement.classList.add(
+                                "w-12",
+                                "h-12",
+                                "rounded-sm"
+                            );
+                            imageElement.src = item.insert.image;
+                            imageElement.alt = "Image";
+
+                            imageLink.appendChild(imageElement);
+                            imageLinkWrapper.appendChild(imageLink);
+
+                            // Menambahkan link wrapper ke dalam imageWrapper
+                            imageWrapper.appendChild(imageLinkWrapper);
+                        }
+
+                        // Cek jika ada link
+                        if (item.attributes && item.attributes.link) {
+                            const linkCard = document.createElement("div");
+                            linkCard.classList.add(
+                                "attachment-card",
+                                "p-4",
+                                "mt-2",
+                                "border",
+                                "rounded-lg",
+                                "shadow-md"
+                            );
+                            linkCard.innerHTML = `
+                                <h5 class="font-semibold text-gray-800">Link:</h5>
+                                <a href="${item.attributes.link}" class="text-blue-500 hover:text-blue-700" target="_blank">${item.attributes.link}</a>
+                            `;
+                            attachmentsContainer.appendChild(linkCard);
+                        }
+                    });
+
+                    // Jika ada gambar, tambahkan wrapper gambar ke container
+                    if (imageWrapper) {
+                        attachmentsContainer.appendChild(imageWrapper);
+                    }
+                }
+
                 // Mengambil dan menampilkan komentar untuk task ini
                 const comments = task.comments; // Asumsi comments ada di response.data
                 // Clear previous comments
@@ -104,7 +220,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Loop untuk menampilkan komentar
                 comments.forEach((comment) => {
                     if (comment.task_id === Number(currentTaskId)) {
-                        console.log("Comment:", comment); // Debugging
                         // Elemen utama komentar
                         const commentWrapper = document.createElement("div");
                         commentWrapper.classList.add(
@@ -192,57 +307,6 @@ document.addEventListener("DOMContentLoaded", function () {
                             "dark:text-gray-400"
                         );
 
-                        // Dropdown menu
-                        const dropdownButton = document.createElement("button");
-                        dropdownButton.id = "dropdownMenuIconButton";
-                        dropdownButton.dataset.dropdownToggle = "dropdownDots";
-                        dropdownButton.dataset.dropdownPlacement =
-                            "bottom-start";
-                        dropdownButton.classList.add(
-                            "inline-flex",
-                            "self-center",
-                            "items-center",
-                            "p-2",
-                            "text-sm",
-                            "font-medium",
-                            "text-center",
-                            "text-gray-900",
-                            "bg-white",
-                            "rounded-lg",
-                            "hover:bg-gray-100",
-                            "focus:ring-4",
-                            "focus:outline-none",
-                            "dark:text-white",
-                            "focus:ring-gray-50",
-                            "dark:bg-gray-900",
-                            "dark:hover:bg-gray-800",
-                            "dark:focus:ring-gray-600"
-                        );
-
-                        const dropdownIcon = document.createElement("svg");
-                        dropdownIcon.classList.add(
-                            "w-4",
-                            "h-4",
-                            "text-gray-500",
-                            "dark:text-gray-400"
-                        );
-                        dropdownIcon.setAttribute("aria-hidden", "true");
-                        dropdownIcon.setAttribute(
-                            "xmlns",
-                            "http://www.w3.org/2000/svg"
-                        );
-                        dropdownIcon.setAttribute("fill", "currentColor");
-                        dropdownIcon.setAttribute("viewBox", "0 0 4 15");
-
-                        const dropdownPath = document.createElement("path");
-                        dropdownPath.setAttribute(
-                            "d",
-                            "M3.5 1.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6.041a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 5.959a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z"
-                        );
-
-                        dropdownIcon.appendChild(dropdownPath);
-                        dropdownButton.appendChild(dropdownIcon);
-
                         // Menyusun elemen
                         commentContent.appendChild(commentHeader);
                         commentContent.appendChild(commentTextElement);
@@ -250,8 +314,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
                         commentWrapper.appendChild(profileImage);
                         commentWrapper.appendChild(commentContent);
-                        commentWrapper.appendChild(dropdownButton);
-
                         // Menambahkan komentar ke dalam elemen komentar
                         document
                             .getElementById("comments")
@@ -299,7 +361,6 @@ document.addEventListener("DOMContentLoaded", function () {
                               }
                             : null;
 
-                    console.log(user);
                     if (user) {
                         // Menyusun elemen gambar profil
                         const userProfileImage = document.createElement("img");
@@ -441,8 +502,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 )
                 .then(function (response) {
                     const comment = response.data; // Ambil komentar yang diterima dari respons
-
-                    console.log("Comment received:", comment); // Debugging
 
                     // Elemen utama komentar
                     const commentWrapper = document.createElement("div");
@@ -622,88 +681,40 @@ document.addEventListener("DOMContentLoaded", function () {
         return url;
     });
 
-    // Update hidden input with Delta on content change
-    // Custom blot untuk membuat thumbnail
-    const Inline = Quill.import("blots/inline");
-
-    class ImageThumbnailBlot extends Inline {
-        static create(value) {
-            const node = super.create();
-            node.setAttribute("href", value.url); // URL gambar penuh
-            node.setAttribute("target", "_blank");
-            node.classList.add("thumbnail");
-            node.style.cursor = "pointer";
-
-            // Tambahkan thumbnail
-            const img = document.createElement("img");
-            img.src = value.thumbnail; // URL thumbnail
-            img.alt = "Image Thumbnail";
-            img.style.maxWidth = "100px";
-            img.style.height = "auto";
-
-            node.appendChild(img);
-            return node;
-        }
-
-        static formats(node) {
-            return {
-                url: node.getAttribute("href"),
-                thumbnail: node.querySelector("img")?.getAttribute("src"),
-            };
-        }
-    }
-
-    ImageThumbnailBlot.blotName = "imageThumbnail";
-    ImageThumbnailBlot.tagName = "a";
-
-    Quill.register(ImageThumbnailBlot);
-
-    // Tambahkan gambar sebagai thumbnail
-    function insertThumbnail(url, thumbnail) {
-        const range = quill.getSelection();
-        quill.insertEmbed(range.index, "imageThumbnail", { url, thumbnail });
-    }
-
-    // Event untuk menyimpan Delta ke hidden input
-    quill.on("text-change", function () {
-        const delta = quill.getContents(); // Get Delta JSON
-        document.getElementById("description").value = JSON.stringify(delta);
-    });
-
     // Event listener untuk menampilkan popup saat thumbnail diklik
-    document.addEventListener("click", function (e) {
-        if (e.target.closest(".thumbnail")) {
-            e.preventDefault();
-            const fullImageUrl = e.target
-                .closest(".thumbnail")
-                .getAttribute("href");
+    // document.addEventListener("click", function (e) {
+    //     if (e.target.closest(".thumbnail")) {
+    //         e.preventDefault();
+    //         const fullImageUrl = e.target
+    //             .closest(".thumbnail")
+    //             .getAttribute("href");
 
-            // Tampilkan popup
-            const popup = document.createElement("div");
-            popup.style.position = "fixed";
-            popup.style.top = "50%";
-            popup.style.left = "50%";
-            popup.style.transform = "translate(-50%, -50%)";
-            popup.style.zIndex = "1000";
-            popup.style.background = "rgba(0, 0, 0, 0.8)";
-            popup.style.padding = "20px";
-            popup.style.borderRadius = "10px";
+    //         // Tampilkan popup
+    //         const popup = document.createElement("div");
+    //         popup.style.position = "fixed";
+    //         popup.style.top = "50%";
+    //         popup.style.left = "50%";
+    //         popup.style.transform = "translate(-50%, -50%)";
+    //         popup.style.zIndex = "1000";
+    //         popup.style.background = "rgba(0, 0, 0, 0.8)";
+    //         popup.style.padding = "20px";
+    //         popup.style.borderRadius = "10px";
 
-            const img = document.createElement("img");
-            img.src = fullImageUrl;
-            img.style.maxWidth = "100%";
-            img.style.height = "auto";
+    //         const img = document.createElement("img");
+    //         img.src = fullImageUrl;
+    //         img.style.maxWidth = "100%";
+    //         img.style.height = "auto";
 
-            const closeBtn = document.createElement("button");
-            closeBtn.textContent = "Close";
-            closeBtn.style.marginTop = "10px";
-            closeBtn.addEventListener("click", () => {
-                document.body.removeChild(popup);
-            });
+    //         const closeBtn = document.createElement("button");
+    //         closeBtn.textContent = "Close";
+    //         closeBtn.style.marginTop = "10px";
+    //         closeBtn.addEventListener("click", () => {
+    //             document.body.removeChild(popup);
+    //         });
 
-            popup.appendChild(img);
-            popup.appendChild(closeBtn);
-            document.body.appendChild(popup);
-        }
-    });
+    //         popup.appendChild(img);
+    //         popup.appendChild(closeBtn);
+    //         document.body.appendChild(popup);
+    //     }
+    // });
 });

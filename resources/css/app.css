@@ -8,6 +8,46 @@
     html {
         @apply font-plusjakarta;
     }
+
+    th {
+        @apply py-4 text-center;
+    }
+
+    tr {
+        @apply py-4 text-center;
+    }
+
+    tbody tr:nth-child(odd) {
+        @apply bg-[#FAFAFA];
+    }
+
+    tbody tr:nth-child(even) {
+        @apply bg-[#F4F4F4];
+    }
+
+    tbody td {
+        @apply py-4;
+    }
+
+    li.activate {
+        @apply bg-[#F5F5F7] rounded-[10px];
+
+        a {
+            @apply text-[#141522] font-bold;
+        }
+
+        button {
+            @apply text-[#141522] font-bold;
+        }
+
+        svg {
+            @apply stroke-[#141522];
+        }
+    }
+}
+
+svg {
+    @apply stroke-[#8E92BC];
 }
 
 /* Styling untuk tombol exit */
@@ -34,7 +74,7 @@
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.5); /* Overlay */
-    z-index: 1000; /* Pastikan modal berada di atas elemen lain */
+    z-index: 100; /* Pastikan modal berada di atas elemen lain */
 }
 
 .modal-overlay {
@@ -48,7 +88,7 @@
 
 .modal-content {
     position: relative;
-    z-index: 1001; /* Pastikan konten modal berada di atas overlay */
+    z-index: 100; /* Pastikan konten modal berada di atas overlay */
     padding: 20px;
     background: white;
     margin: 50px auto;
@@ -86,4 +126,35 @@
 
 .bg-color-primary {
     background-color: #546fff;
+}
+
+.disabled-input {
+    background-color: #f3f4f6; /* Warna latar belakang abu-abu terang */
+    color: #6b7280; /* Warna teks abu-abu */
+    cursor: not-allowed; /* Menambahkan kursor yang menunjukkan elemen tidak dapat diubah */
+    pointer-events: none; /* Menonaktifkan interaksi dengan elemen */
+}
+
+#taskPopup {
+    z-index: 100;
+}
+
+.ql-container.ql-snow {
+    border: none !important;
+}
+
+#taskDescription .ql-container {
+    border: none !important;
+}
+
+#taskDescription .ql-editor {
+    border: none !important;
+}
+
+.add-card {
+    z-index: 100;
+}
+
+.card-layout-scoll {
+    @apply max-h-[90vh] overflow-y-auto;
 }

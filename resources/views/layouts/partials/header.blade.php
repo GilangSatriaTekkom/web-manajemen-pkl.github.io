@@ -1,7 +1,19 @@
-    <header class=" p-4 text-black flex items-center justify-end {{ request()->is('login', 'register') ? 'hidden' : '' }}">
+    <header class=" p-4 text-black flex items-center justify-between {{ request()->is('login', 'register') ? 'hidden' : '' }}">
+        <h1 class="text-2xl font-bold">
+            {{
+                request()->segment(1) === 'dashboard'
+                    ? 'Project'
+                    : (in_array(request()->segment(1), ['pembimbing', 'peserta'])
+                        ? 'Users/' . ucfirst(request()->segment(1))
+                        : ucfirst(request()->segment(1))
+                      )
+            }}
+        </h1>
+
         <div class="flex items-center space-x-4">
+
             @auth
-                @if (Auth::user()->roles === 'admin')
+                {{-- @if (Auth::user()->roles === 'admin')
                     <!-- Menampilkan tautan hanya untuk admin -->
                     <a href="{{ route('report.index') }}"
                         class="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-800">
@@ -13,7 +25,7 @@
                     <button id="open-modal-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
                         +Create
                     </button>
-                @endif
+                @endif --}}
 
                 <!-- Dropdown User -->
                 <div class="relative">

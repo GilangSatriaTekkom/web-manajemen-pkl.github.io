@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
         if (status === "in_progress") {
             // Jika menekan "Mulai Pekerjaan" atau "Lanjutkan Pekerjaan"
             startButton.classList.add("hidden");
-            stopButton.classList.remove("hidden");
+            // stopButton.classList.remove("hidden");
             resumeButton.classList.add("hidden");
             finishButton.classList.remove("hidden");
 
@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         } else if (status === "paused") {
             // Jika menekan "Hentikan Pekerjaan"
-            stopButton.classList.add("hidden");
+            // stopButton.classList.add("hidden");
             resumeButton.classList.remove("hidden");
 
             // Timer berhenti
@@ -187,7 +187,7 @@ document.addEventListener("DOMContentLoaded", function () {
 // Fungsi untuk mereset tombol
 window.resetTaskButtons = function () {
     document.getElementById("startTaskButton").classList.add("hidden");
-    document.getElementById("stopTaskButton").classList.add("hidden");
+    // document.getElementById("stopTaskButton").classList.add("hidden");
     document.getElementById("resumeTaskButton").classList.add("hidden");
     document.getElementById("finishTaskButton").classList.add("hidden");
 };
