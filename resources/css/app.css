@@ -158,3 +158,23 @@ svg {
 .card-layout-scoll {
     @apply max-h-[90vh] overflow-y-auto;
 }
+
+.description-border.ql-container.ql-snow {
+    @apply border-2 border-black;
+}
+#sendButton {
+    display: none;
+}
+
+/* Tampilkan tombol Send ketika input dengan ID commentInput mendapatkan fokus */
+#commentInput:focus + #sendButton {
+    display: block;
+}
+
+.button {
+    @apply px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700;
+}
+
+body {
+    @apply bg-[FAFAFA];
+}

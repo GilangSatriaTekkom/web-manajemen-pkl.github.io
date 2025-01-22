@@ -64,9 +64,45 @@ class DashboardController extends Controller
         })->unique('project_id')->values();
         // dd($projectParticipants);
 
+        view()->share('creatorPict', $creatorPict);
 
-        return view('layouts.dashboard',['projectParticipants' => $projectParticipants], compact('projects', 'creatorPict', 'creatorProjects'));
+
+        return view('layouts.dashboard',['projectParticipants' => $projectParticipants], compact('projects', 'creatorProjects'));
     }
+
+    public function searchProjects(Request $request)
+    {
+        $query = $request->get('query', '');
+
+        // Cari proyek berdasarkan ID atau nama
+        $projects = Project::query()
+            ->where('id', $query) // Pencarian berdasarkan ID
+            ->orWhere('name', 'like', "%{$query}%") // Pencarian berdasarkan nama proyek
+            ->with(['participants', 'projectCreators']) // Relasi jika diperlukan
+            ->get();
+
+            $user = auth()->user();
+
+        // Mendapatkan proyek-proyek yang dibuat oleh pengguna
+        $projectsFromCreator = Project::whereHas('projectCreators', function ($query) use ($user) {
+            $query->where('creator_project', $user->id);
+        })->with(['projectCreators'])->get();
+
+        // Menyusun daftar ID pengguna yang membuat proyek
+        $creatorProjects = $projectsFromCreator->flatMap(function ($project) {
+            return $project->projectCreators->map(function ($creator) {
+                return $creator->pivot->creator_project;
+            });
+        });
+
+        // Mendapatkan gambar profil dari pengguna yang membuat proyek
+        $userNames = User::whereIn('id', $creatorProjects)->pluck('profile_pict');
+        $creatorPict = $userNames->first();
+
+        // Pass the $creatorPict to the view
+        return view('layouts.dashboard', compact('projects', 'creatorPict'));
+    }
+
 
 
 

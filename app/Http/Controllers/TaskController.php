@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+
 use App\Models\Task;
 use App\Models\Board;
 use App\Models\Project;
@@ -11,6 +12,7 @@ use App\Models\Report;
 use App\Models\User;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -72,17 +74,25 @@ class TaskController extends Controller
                 return $comment; // Penting: kembalikan elemen yang telah dimodifikasi
             });
 
+            $tasksDescription = $task->description->text ?? null;
+            $tasksDescription = $tasksDescription ? json_decode($tasksDescription) : null;
+
+            if (empty($tasksDescription)) {
+                $tasksDescription = 'Deskripsi tugas tidak tersedia'; // Atur nilai default
+            }
+
 
             // Mengembalikan data dalam format JSON
             return response()->json([
                 'title' => $title,
-                'tasksDescription' => json_decode($task->description->text),
+                'tasksDescription' => $tasksDescription,
                 'status' => $status,
                 'comments' => $comments,
                 'worked_by' => $workedby,
                 'profile_picture' => $profilePicture,
                 'user_name' => $userName,
                 'profileUrl' => url('profile/' . $workedby),
+                'loggedInUserId' => auth()->id(),
             ]);
         }
 
@@ -134,23 +144,88 @@ class TaskController extends Controller
 
     public function store(Request $request)
     {
-        // Validasi input
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required',
-            'project_id' => 'required|exists:projects,id',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-        ]);
+        Log::info('Request received:', $request->all());
 
+        $data = $request->all();
+        Log::info('Data extracted:', $data);
+
+        // Menyimpan gambar jika ada
+        $imageUrls = [];
+        if (isset($data['images']) && $data['images']) {
+            // Mendapatkan gambar URL yang dikirimkan dalam data
+            $imageUrls = $data['images']; // Asumsi image sudah berupa URL
+            Log::info('Images received:', $imageUrls);
+        }
+
+        // Mendapatkan data lainnya
         $projectId = $request->input('project_id');
+        Log::info('Project ID:', ['project_id' => $projectId]);
+
         $board = Board::where('name', 'To Do')->firstOrFail();
+        Log::info('Board found:', ['board' => $board]);
+
         $project = Project::findOrFail($projectId);
+        Log::info('Project found:', ['project' => $project]);
 
         $user = auth()->id();
+        Log::info('Authenticated user:', ['user_id' => $user]);
 
+        // Membuat deskripsi dengan URL gambar
+        $descriptionText = $request->input('description');
+        Log::info('Description text:', ['description' => $descriptionText]);
+
+        // Mengonversi deskripsi menjadi format Quill JSON
+        $quillDescription = json_decode($descriptionText, true);
+        Log::info('Quill description:', ['quill_description' => $quillDescription]);
+
+        // Memproses gambar jika ada dalam 'images'
+        if (isset($data['images']) && is_array($data['images']) && !empty($data['images'])) {
+            foreach ($data['images'] as $image) {
+                if ($image && (filter_var($image, FILTER_VALIDATE_URL) || str_starts_with($image, '/storage/'))) {
+                    // Menambahkan gambar ke dalam konten Quill jika gambar valid (berupa URL)
+                    $quillDescription['ops'][] = [
+                        'insert' => [
+                            'image' => $image, // Gambar dalam format Quill
+                        ]
+                    ];
+                    Log::info('Valid image added to Quill:', ['image' => $image]);
+                } else {
+                    Log::info('Invalid image skipped:', ['image' => $image]);
+                }
+            }
+        }
+
+        // Memproses link jika ada dalam 'links'
+        if (isset($data['links']) && !empty($data['links'])) {
+            $links = is_array($data['links']) ? $data['links'] : [$data['links']]; // Pastikan links adalah array
+            foreach ($links as $link) {
+                if ($link) {
+                    $quillDescription['ops'][] = [
+                        'insert' => $link,
+                        'attributes' => ['link' => $link] // Menambahkan link dengan atribut 'link'
+                    ];
+                    Log::info('Link added to Quill:', ['link' => $link]);
+                }
+            }
+        }
+
+        // Menghapus semua objek dengan nilai {"insert":{"image":true}} dari $descriptionData['ops']
+        $quillDescription['ops'] = array_filter($quillDescription['ops'], function ($item) {
+            // Memastikan item bukan gambar dengan value true
+            return !(isset($item['insert']['image']) && $item['insert']['image'] === true);
+        });
+
+        // Re-index array setelah filter
+        $quillDescription['ops'] = array_values($quillDescription['ops']);
+
+        // Simpan deskripsi ke database sebagai string biasa
         $description = Description::create([
-            'text' => $request->input('description'),
+            'text' => json_encode($quillDescription), // Simpan sebagai string biasa
         ]);
+
+        Log::info('Description saved:', [$description]);
+
+        Log::info('Description saved:', ['description_id' => $description->id]);
 
         // Simpan task ke tabel tasks
         $task = Task::create([
@@ -161,31 +236,60 @@ class TaskController extends Controller
             'description_id' => $description->id,
             'created_by' => $user,
         ]);
+        Log::info('Task created:', ['task_id' => $task->id]);
 
-        // Redirect ke halaman detail proyek
-        return redirect()
-            ->route('project.show', ['id' => $project->id])
-            ->with('success', 'Task berhasil dibuat!');
+        return response()->json([
+            'success' => true,
+            'message' => 'Task berhasil dibuat!',
+            'task_id' => $task->id,
+            'project_id' => $project->id,
+            'description_id' => $description->id,
+        ]);
+
     }
 
-    // Fungsi untuk menangani upload gambar lokal
-    protected function handleUploadedImage($base64Image)
-    {
-        // Decode base64 image
-        $imageData = base64_decode(preg_replace('/^data:image\/\w+;base64,/', '', $base64Image));
 
-        // Tentukan nama file
-        $imageName = 'image_' . uniqid() . '.png';
 
-        // Tentukan folder tujuan penyimpanan
-        $imagePath = public_path('uploads/images/' . $imageName);
 
-        // Simpan gambar ke folder
-        file_put_contents($imagePath, $imageData);
 
-        // Kembalikan URL gambar yang bisa diakses
-        return url('uploads/images/' . $imageName);
+    public function uploadImage(Request $request)
+{
+
+    Log::info("message: ", $request->all());
+
+    // Check if 'images' are uploaded
+    if ($request->hasFile('images')) {
+        $imageUrls = [];
+
+        foreach ($request->file('images') as $image) {
+            // Log the file name and real path of the uploaded image
+
+            // Store the image and get its URL
+            $path = $image->store('images', 'public');
+            $imageUrls[] = Storage::url($path);
+        }
+
+        return response()->json(['imageUrls' => $imageUrls]);
     }
+
+    // Check if 'imagesEdit' are uploaded
+    if ($request->hasFile('imagesEdit')) {
+        $imageUrls = [];
+
+        foreach ($request->file('imagesEdit') as $image) {
+            // Log the file name and real path of the uploaded image
+            // Store the image and get its URL
+            $path = $image->store('imagesEdit', 'public');
+            $imageUrls[] = Storage::url($path);
+        }
+
+        return response()->json(['imageUrls' => $imageUrls]);
+    }
+
+    // Return error if no images were uploaded
+    return response()->json(['error' => 'No image uploaded'], 400);
+}
+
 
 
     public function updateBoard(Request $request)
@@ -275,5 +379,121 @@ class TaskController extends Controller
             ],
         ], 404);
     }
+
+    public function editData($projectId, $taskId)
+    {
+        // Ambil task berdasarkan taskId dan projectId
+        $task = Task::where('project_id', $projectId)
+                    ->where('id', $taskId)
+                    ->first();
+
+        if (!$task) {
+            return response()->json(['error' => 'Task not found'], 404);
+        }
+
+        $description_id = $task->description_id;
+
+        $getdescription = Description::where('id', $description_id)->first();
+
+        // Kembalikan data task dalam format JSON
+        return response()->json([
+            'task' => $task,
+            'description' => $getdescription
+        ]);
+    }
+
+
+    public function updateTask(Request $request, $taskId)
+    {
+        $response = [];
+
+        Log::info('Request data:', $request->all()); // Log data request untuk debugging
+
+        // Mengakses data request
+        $data = $request->all();
+
+        // Memastikan taskId valid
+        if (is_null($data['taskId'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Task ID tidak ditemukan.',
+            ]);
+        }
+
+        // Cari task yang ingin diedit
+        $task = Task::findOrFail($taskId);
+
+        // Mengambil description_id yang ada di tabel Task
+        $descriptionId = $task->description_id;
+
+        // Cari deskripsi yang ada menggunakan description_id
+        $description = Description::findOrFail($descriptionId);
+
+        // Menyimpan gambar jika ada
+        $imageUrl = null;
+        if (isset($data['image']) && $data['image']) {
+            // Mendapatkan gambar URL yang dikirimkan dalam data
+            $imageUrl = $data['image']; // Asumsi image sudah berupa URL
+        }
+
+        // Mengakses dan memproses deskripsi yang berformat JSON (dari Quill)
+        $descriptionText = $data['description'] ?? 'Tidak ada deskripsi saat ini';
+        $descriptionData = json_decode($descriptionText, true); // Mengubah JSON string menjadi array
+
+        // Memproses gambar jika ada dalam 'imagesEdit'
+        if (isset($data['imagesEdit']) && is_array($data['imagesEdit']) && !empty($data['imagesEdit'])) {
+            foreach ($data['imagesEdit'] as $image) {
+                if ($image) {
+                    // Menambahkan gambar ke dalam konten Quill
+                    $descriptionData['ops'][] = [
+                        'insert' => [
+                            'image' => $image, // Gambar dalam format Quill
+                        ]
+                    ];
+                }
+            }
+        }
+
+        // Memproses link jika ada dalam 'links'
+        if (isset($data['links']) && !empty($data['links'])) {
+            $links = is_array($data['links']) ? $data['links'] : [$data['links']]; // Pastikan links adalah array
+            foreach ($links as $link) {
+                if ($link) {
+                    $descriptionData['ops'][] = [
+                        'insert' => $link,
+                        'attributes' => ['link' => $link] // Menambahkan link dengan atribut 'link'
+                    ];
+                }
+            }
+        }
+
+        // Mengonversi kembali deskripsi ke format JSON Quill
+        $updatedDescriptionText = json_encode($descriptionData);
+
+        // Hapus deskripsi lama dan simpan yang baru
+        $description->text = $updatedDescriptionText; // Mengupdate teks deskripsi dengan format Quill
+        $description->save(); // Simpan perubahan
+
+        // Update task dengan data baru
+        $task->title = $data['titleTaskEdit'];
+        $task->project_id = $data['project_id'];
+        $task->description_id = $description->id; // Pastikan description_id tetap sama
+        $task->save();
+
+        // Mengembalikan respons JSON
+        return response()->json([
+            'success' => true,
+            'message' => 'Task berhasil diperbarui!',
+            'task' => $task,
+        ]);
+    }
+
+
+
+
+
+
+
+
 
 }

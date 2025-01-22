@@ -95,17 +95,28 @@ document.addEventListener("DOMContentLoaded", function () {
                     readOnly: true, // Hanya untuk membaca
                 });
 
-                const delta = task.tasksDescription.ops.filter(
-                    (op) => typeof op.insert === "string"
-                );
+                // Cek apakah task.tasksDescription kosong atau tidak
+                if (
+                    !task.tasksDescription ||
+                    !task.tasksDescription.ops ||
+                    task.tasksDescription.ops.length === 0
+                ) {
+                    // Jika kosong, tampilkan pesan di editor
+                    quill.setText("Tidak ada deskripsi pada task ini");
+                } else {
+                    // Filter hanya `insert` yang berupa teks dan tidak memiliki atribut
+                    const delta = task.tasksDescription.ops.filter((op) => {
+                        return typeof op.insert === "string" && !op.attributes;
+                    });
 
-                // Membuat Delta baru yang hanya berisi teks
-                const filteredDelta = {
-                    ops: delta,
-                };
+                    // Membuat Delta baru yang hanya berisi teks
+                    const filteredDelta = {
+                        ops: delta,
+                    };
 
-                // Mengisi konten Quill editor dengan Delta yang sudah difilter
-                quill.setContents(filteredDelta);
+                    // Mengisi konten Quill editor dengan Delta yang sudah difilter
+                    quill.setContents(filteredDelta);
+                }
 
                 // Menampilkan modal hanya setelah data berhasil dimuat
                 taskPopup.classList.remove("hidden");
@@ -119,9 +130,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 const attachmentsContainer =
                     document.getElementById("attachments");
 
-                const ops = task.tasksDescription.ops;
-
-                if (task && ops) {
+                // Cek apakah task.tasksDescription dan ops ada
+                if (
+                    task &&
+                    task.tasksDescription &&
+                    task.tasksDescription.ops
+                ) {
+                    const ops = task.tasksDescription.ops;
                     let imageWrapper = null;
 
                     ops.forEach((item) => {
@@ -152,11 +167,11 @@ document.addEventListener("DOMContentLoaded", function () {
                                     "text-gray-800",
                                     "mb-2"
                                 );
-                                title.innerText = "Image:";
-                                attachmentsContainer.insertBefore(
-                                    title,
-                                    imageWrapper
-                                );
+                                // Tambahkan wrapper ke dalam container utama
+                                attachmentsContainer.appendChild(imageWrapper);
+
+                                // Menambahkan title di paling atas dari attachmentsContainer
+                                attachmentsContainer.prepend(title); // Gunakan prepend untuk menambahkannya di awal
                             }
 
                             // Membuat elemen gambar dan menambahkannya ke dalam div yang dapat diklik
@@ -165,7 +180,6 @@ document.addEventListener("DOMContentLoaded", function () {
                             imageLinkWrapper.classList.add("gap-2"); // Flex row untuk gambar
 
                             const imageLink = document.createElement("a");
-                            // imageLink.href = item.insert.image; // Link untuk menampilkan gambar lebih besar
                             imageLink.setAttribute("target", "_blank"); // Membuka gambar di tab baru
                             imageLink.setAttribute(
                                 "onclick",
@@ -200,9 +214,9 @@ document.addEventListener("DOMContentLoaded", function () {
                                 "shadow-md"
                             );
                             linkCard.innerHTML = `
-                                <h5 class="font-semibold text-gray-800">Link:</h5>
-                                <a href="${item.attributes.link}" class="text-blue-500 hover:text-blue-700" target="_blank">${item.attributes.link}</a>
-                            `;
+                <h5 class="font-semibold text-gray-800">Link:</h5>
+                <a href="${item.attributes.link}" class="text-blue-500 hover:text-blue-700" target="_blank">${item.attributes.link}</a>
+            `;
                             attachmentsContainer.appendChild(linkCard);
                         }
                     });
@@ -211,6 +225,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (imageWrapper) {
                         attachmentsContainer.appendChild(imageWrapper);
                     }
+                } else {
+                    // Jika ops kosong, tampilkan pesan
+                    const noAttachmentsMessage = document.createElement("p");
+                    noAttachmentsMessage.classList.add("text-gray-500", "mt-4");
+                    noAttachmentsMessage.innerText =
+                        "Tidak ada Link atau gambar pada task ini.";
+                    attachmentsContainer.appendChild(noAttachmentsMessage);
                 }
 
                 // Mengambil dan menampilkan komentar untuk task ini
@@ -218,15 +239,25 @@ document.addEventListener("DOMContentLoaded", function () {
                 // Clear previous comments
                 document.getElementById("comments").innerHTML = ""; // Kosongkan komentar yang ada
                 // Loop untuk menampilkan komentar
+                // Pastikan loggedInUserId tersedia
+                const loggedInUserId = task.loggedInUserId;
+
                 comments.forEach((comment) => {
                     if (comment.task_id === Number(currentTaskId)) {
                         // Elemen utama komentar
                         const commentWrapper = document.createElement("div");
+
+                        // Cek apakah komentar dibuat oleh user yang sedang login
+                        const isLoggedInUser =
+                            comment.user_id === loggedInUserId;
+
+                        // Tambahkan kelas berdasarkan posisi komentar
                         commentWrapper.classList.add(
                             "flex",
                             "items-start",
                             "gap-2.5",
-                            "mt-4"
+                            "mt-4",
+                            isLoggedInUser ? "justify-end" : "justify-start" // Posisi komentar
                         );
 
                         // Gambar profil
@@ -236,7 +267,8 @@ document.addEventListener("DOMContentLoaded", function () {
                             "h-8",
                             "rounded-full"
                         );
-                        profileImage.src = comment.image_url; // Ubah jika gambar profil tersedia
+                        profileImage.src =
+                            comment.image_url || "/path/to/default/image.jpg";
                         profileImage.alt = "Profile Picture";
 
                         // Kontainer isi komentar
@@ -252,7 +284,8 @@ document.addEventListener("DOMContentLoaded", function () {
                             "bg-gray-100",
                             "rounded-e-xl",
                             "rounded-es-xl",
-                            "dark:bg-gray-700"
+                            "dark:bg-gray-700",
+                            isLoggedInUser ? "bg-blue-100" : "bg-gray-100" // Warna berbeda untuk komentar user login
                         );
 
                         // Header komentar
@@ -272,7 +305,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             "dark:text-white"
                         );
                         commenterName.textContent =
-                            comment.user.name || "Anonymous"; // Ganti dengan nama pengguna jika tersedia
+                            comment.user.name || "Anonymous";
 
                         const commentTime = document.createElement("span");
                         commentTime.classList.add(
@@ -282,7 +315,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             "dark:text-gray-400"
                         );
                         commentTime.textContent =
-                            comment.time_ago || "Just now"; // Ganti dengan waktu sebenarnya
+                            comment.time_ago || "Just now";
 
                         commentHeader.appendChild(commenterName);
                         commentHeader.appendChild(commentTime);
@@ -298,22 +331,18 @@ document.addEventListener("DOMContentLoaded", function () {
                         );
                         commentTextElement.textContent = comment.comment;
 
-                        // Status komentar
-                        const commentStatus = document.createElement("span");
-                        commentStatus.classList.add(
-                            "text-sm",
-                            "font-normal",
-                            "text-gray-500",
-                            "dark:text-gray-400"
-                        );
-
                         // Menyusun elemen
                         commentContent.appendChild(commentHeader);
                         commentContent.appendChild(commentTextElement);
-                        commentContent.appendChild(commentStatus);
 
-                        commentWrapper.appendChild(profileImage);
-                        commentWrapper.appendChild(commentContent);
+                        if (!isLoggedInUser) {
+                            commentWrapper.appendChild(profileImage); // Profil di kiri
+                            commentWrapper.appendChild(commentContent);
+                        } else {
+                            commentWrapper.appendChild(commentContent); // Profil di kanan
+                            commentWrapper.appendChild(profileImage);
+                        }
+
                         // Menambahkan komentar ke dalam elemen komentar
                         document
                             .getElementById("comments")
@@ -415,7 +444,8 @@ document.addEventListener("DOMContentLoaded", function () {
                             document.getElementById("assignedTo");
                         assignedTo.appendChild(userLink);
                     } else {
-                        assignedTo.innerHTML = "<p>Unassigned</p>";
+                        assignedTo.innerHTML =
+                            "<p>Belum ada yang mengerjakan</p>";
                     }
                 } else if (status === "paused") {
                     // Jika menekan "Hentikan Pekerjaan"
@@ -659,18 +689,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     };
 
-    var quill = new Quill("#description-container", {
-        theme: "snow",
-        modules: {
-            toolbar: [
-                [{ list: "ordered" }, { list: "bullet" }],
-                ["bold", "italic", "underline"],
-                [{ align: [] }],
-                ["link", "image"],
-            ],
-        },
-    });
-
     // Override prompt untuk menambahkan https:// jika tidak ada protokol
     const originalPrompt = Quill.import("ui/prompt");
     Quill.register("ui/prompt", function (defaultValue) {
@@ -681,40 +699,5 @@ document.addEventListener("DOMContentLoaded", function () {
         return url;
     });
 
-    // Event listener untuk menampilkan popup saat thumbnail diklik
-    // document.addEventListener("click", function (e) {
-    //     if (e.target.closest(".thumbnail")) {
-    //         e.preventDefault();
-    //         const fullImageUrl = e.target
-    //             .closest(".thumbnail")
-    //             .getAttribute("href");
-
-    //         // Tampilkan popup
-    //         const popup = document.createElement("div");
-    //         popup.style.position = "fixed";
-    //         popup.style.top = "50%";
-    //         popup.style.left = "50%";
-    //         popup.style.transform = "translate(-50%, -50%)";
-    //         popup.style.zIndex = "1000";
-    //         popup.style.background = "rgba(0, 0, 0, 0.8)";
-    //         popup.style.padding = "20px";
-    //         popup.style.borderRadius = "10px";
-
-    //         const img = document.createElement("img");
-    //         img.src = fullImageUrl;
-    //         img.style.maxWidth = "100%";
-    //         img.style.height = "auto";
-
-    //         const closeBtn = document.createElement("button");
-    //         closeBtn.textContent = "Close";
-    //         closeBtn.style.marginTop = "10px";
-    //         closeBtn.addEventListener("click", () => {
-    //             document.body.removeChild(popup);
-    //         });
-
-    //         popup.appendChild(img);
-    //         popup.appendChild(closeBtn);
-    //         document.body.appendChild(popup);
-    //     }
-    // });
+    // Fungsi untuk menambahkan komentar
 });

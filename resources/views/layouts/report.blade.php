@@ -10,7 +10,7 @@
         @include('layouts.partials.header')
 
         <!-- Filter Form -->
-        <form method="GET" action="{{ route('report.filter') }}" class="mb-4 p-4">
+        <form method="GET" action="{{ route('report.index') }}" class="mb-4 p-4">
             <div class="row">
                 <div class="col-md-4">
                     <input type="text" name="search" class="form-control" placeholder="Search by task name" value="{{ request('search') }}">
