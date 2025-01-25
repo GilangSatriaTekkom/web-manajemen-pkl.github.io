@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use App\Models\User;
 
+use Illuminate\Support\Facades\Log;
+
 class ProfileController extends Controller
 {
     public function index($id)
@@ -23,91 +25,92 @@ class ProfileController extends Controller
         return view('layouts.profile', compact('user', 'profilePicture'));
     }
 
-    public function profileUpload(Request $request) {
+    public function profileUpload(Request $request, $id) {
+        Log::info('Request data: ', ['data' => $request->all()]);
+        Log::info('User ID: ', ['user_id' => $id]);
 
-        $user = Auth::user();
-         // Validasi file
-         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $user->id,
-            'password' => 'sometimes|nullable|min:8',
-            'roles' => 'sometimes|in:admin,peserta,pembimbing',
-            'asal_sekolah' => 'sometimes|string|max:255',
-            'profile_pict' => 'sometimes|image|mimes:jpg,jpeg,png|max:2048'
-        ]);
+        // Cek apakah ID yang diberikan adalah ID pengguna yang sedang login
+        if (Auth::id() == $id) {
+            // Jika ID yang diberikan adalah ID pengguna yang sedang login, ambil user yang sedang login
+            $user = Auth::user();
+        } else {
+            // Jika ID yang diberikan bukan ID pengguna yang sedang login, cari pengguna dengan ID tersebut
+            $user = User::find($id);
 
-
-
-
-            // Periksa apakah ada file gambar yang di-upload
-            if ($request->hasFile('profile_pict')) {
-                // Ambil file gambar
-                $file = $request->file('profile_pict');
-
-                // Periksa apakah file yang di-upload valid
-                if ($file) {
-                    // Ambil ekstensi file
-                    $fileExtension = $file->getClientOriginalExtension();
-
-                    // Nama file baru yang unik
-                    $fileName = uniqid() . '.' . $fileExtension;
-
-                    // Tentukan path penyimpanan file
-                    $filePath = $file->storeAs('uploads/profile_pictures', $fileName, 'public');
-
-                    // Periksa apakah gambar sebelumnya ada dan berbeda
-                    if ($user->profile_pict && $user->profile_pict !== $fileName) {
-                        // Hapus gambar lama jika ada
-                        Storage::disk('public')->delete('uploads/profile_pictures/' . $user->profile_pict);
-                    }
-
-                    // Perbarui nama file gambar di database
-                    $user->profile_pict = $fileName;
-                }
-            } else {
-                // Jika input gambar kosong, jangan ubah nilai profile_picture
-                // Pastikan kolom profile_picture tetap dengan nilai sebelumnya
-                // Tidak ada perubahan pada kolom profile_picture
+            // Jika pengguna tidak ditemukan, kirim error
+            if (!$user) {
+                return redirect()->back()->withErrors(['error' => 'Pengguna tidak ditemukan.']);
             }
+        }
 
-            // Periksa setiap field dan hanya perbarui jika ada perubahan
+        // Validasi data
+        // Cek perubahan pada gambar
+        if ($request->hasFile('profile_pict')) {
+            $file = $request->file('profile_pict');
+            if ($file) {
+                $fileExtension = $file->getClientOriginalExtension();
+                $fileName = uniqid() . '.' . $fileExtension;
+                $filePath = $file->storeAs('uploads/profile_pictures', $fileName, 'public');
+
+                // Hapus gambar lama jika ada perubahan
+                if ($user->profile_pict && $user->profile_pict !== $fileName) {
+                    Storage::disk('public')->delete('uploads/profile_pictures/' . $user->profile_pict);
+                }
+
+                // Update gambar di database
+                $user->profile_pict = $fileName;
+            }
+        }
+
+        // Periksa perubahan dan simpan jika ada perubahan
+        $updated = false; // Variabel untuk melacak apakah ada perubahan
+
+        // Update nama jika ada perubahan
         if ($request->has('name') && $request->name !== $user->name) {
             $user->name = $request->name;
+            $updated = true;
         }
 
+        // Update email jika ada perubahan
         if ($request->has('email') && $request->email !== $user->email) {
+            // Pastikan email yang baru tidak digunakan oleh pengguna lain
+            $existingEmail = User::where('email', $request->email)->first();
+            if ($existingEmail) {
+                return redirect()->back()->withErrors(['email' => 'Email sudah digunakan oleh pengguna lain.']);
+            }
+
             $user->email = $request->email;
+            $updated = true;
         }
 
+        // Update password jika ada perubahan
         if ($request->has('password') && $request->password) {
             $user->password = bcrypt($request->password);
+            $updated = true;
         }
 
+        // Update roles jika ada perubahan
         if ($request->has('roles') && $request->roles !== $user->roles) {
+            Log::info("Roles updated: ", ['roles' => $request->roles]);
             $user->roles = $request->roles;
+            $updated = true;
         }
 
+        // Update asal_sekolah jika ada perubahan
         if ($request->has('asal_sekolah') && $request->asal_sekolah !== $user->asal_sekolah) {
             $user->asal_sekolah = $request->asal_sekolah;
+            $updated = true;
         }
 
-        if ($request->hasFile('profile_pict')) {
-            // Store the file and get the file path
-            $filePath = $request->file('profile_pict')->store('profile_pictures', 'public');
-            $user->profile_pict = $filePath;
-        } else {
-            // If no file is uploaded, keep the old profile picture
-            $filePath = $user->profile_pict;
+        // Jika ada perubahan, simpan ke database
+        if ($updated) {
+            $user->save();
         }
-
-        $user->profile_pict = $filePath;
-        $user->save();
-
 
         // Kirim respons ke frontend
-       // Return a JSON response instead of using view()->response()
-       return redirect()->route('profile', ['id' => $user->id])->with('success', 'Profile updated successfully!');
+        return redirect()->route('profile', ['id' => $user->id])->with('success', 'Profile updated successfully!');
     }
+
 
 
 }

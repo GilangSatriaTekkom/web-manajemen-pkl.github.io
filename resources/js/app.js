@@ -2,10 +2,14 @@ import "./bootstrap";
 import "./taskButton";
 import "../css/app.css";
 import "./popup";
+import "./modalSubmitPictReport";
+import "./alert";
 import Quill from "quill";
 import "quill/dist/quill.snow.css";
 import { comment } from "postcss";
 import "flowbite";
+import swal from "sweetalert";
+import Swal from "sweetalert2";
 
 window.globalTaskId = null;
 

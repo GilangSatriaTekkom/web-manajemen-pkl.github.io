@@ -49,7 +49,8 @@
                         <th>Task</th>
                         <th>Status</th>
                         <th>Time</th>
-                        <th class="rounded-r-[32px]">Worked By</th>
+                        <th>Dikerjakan Oleh</th>
+                        <th class="rounded-r-[32px]">Bukti Pengerjaan</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -59,7 +60,19 @@
                             <td>{{ $report->task_name}}</td>
                             <td>{{ $report->status}}</td>
                             <td>{{ \Carbon\Carbon::parse($report->time ?? now())->translatedFormat('d F Y') }}</td>
-                            <td class="rounded-r-[32px]">{{ $report->worked_by}}</td>
+                            <td>{{ $report->worked_by}}</td>
+                            <td class="rounded-r-[32px]">
+                                @if ($report->image && strpos($report->image, '/storage/') !== false)
+                                    <!-- Jika gambar ada dan URL-nya mengarah ke /storage, tampilkan link untuk melihat gambar -->
+                                    <a href="{{ asset($report->image) }}" target="_blank" class="btn btn-primary">View</a>
+                                @elseif ($report->image === 'Masih dikerjakan')
+                                    <!-- Jika gambar berisi teks 'Masih dikerjakan', tampilkan teks tersebut -->
+                                    <p>{{ $report->image }}</p>
+                                @else
+                                    <!-- Jika tidak ada gambar atau format lain, tampilkan 'Tak ada gambar' -->
+                                    <p>Tak ada gambar</p>
+                                @endif
+                            </td>
 
                         </tr>
                     @empty

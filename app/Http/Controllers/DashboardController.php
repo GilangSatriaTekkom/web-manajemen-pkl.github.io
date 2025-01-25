@@ -14,61 +14,67 @@ use Illuminate\Support\Facades\DB;
 class DashboardController extends Controller
 {
     public function dashboard()
-    {
-        // Check if user is authenticated
-        if (!auth()->check()) {
-            return redirect()->route('login')->with('error', 'Please log in to access the dashboard');
-        }
-
-        $user = auth()->user();
-
-        $projectsFromParticipants = Project::whereHas('participants', function ($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->with(['projectCreators', 'participants'])->get();
-
-        $projectsFromCreator = Project::whereHas('projectCreators', function ($query) use ($user) {
-            $query->where('creator_project', $user->id);
-        })->with(['projectCreators'])->get();
-
-        $projects = $projectsFromParticipants->merge($projectsFromCreator);
-
-
-
-        $creatorProjects = $projectsFromCreator->flatMap(function ($project) {
-            return $project->projectCreators->map(function ($creator) {
-                return $creator->pivot->creator_project;
-            });
-        });
-
-        $userNames = User::whereIn('id', $creatorProjects)->pluck('profile_pict');
-        $creatorPict = $userNames->first();
-
-         // Ambil gambar peserta untuk setiap proyek
-        $projectParticipants = $projects->flatMap(function ($project) {
-            return $project->participants->map(function ($participant) use ($project) {
-                // dd($participant->name);
-                return [
-                    'project_id' => $project->id,
-                    'project_name' => $project->name ?? 'Unknown Project',
-                    'participants' => $project->participants->map(function ($participant) {
-                        return [
-                            'id' => $participant->id ?? null,
-                            'name' => $participant->name ?? 'Unknown',
-                            'profile_image' => $participant->profile_pict
-                                ? asset('storage/' . $participant->profile_pict)
-                                : asset('images/default-profile.png'),
-                        ];
-                    })->toArray(),
-                ];
-            });
-        })->unique('project_id')->values();
-        // dd($projectParticipants);
-
-        view()->share('creatorPict', $creatorPict);
-
-
-        return view('layouts.dashboard',['projectParticipants' => $projectParticipants], compact('projects', 'creatorProjects'));
+{
+    // Check if user is authenticated
+    if (!auth()->check()) {
+        return redirect()->route('login')->with('error', 'Please log in to access the dashboard');
     }
+
+    $user = auth()->user();
+
+    // Ambil proyek dari peserta
+    $projectsFromParticipants = Project::whereHas('participants', function ($query) use ($user) {
+        $query->where('user_id', $user->id);
+    })->with(['projectCreators', 'participants'])->get();
+
+    // Ambil proyek dari creator
+    $projectsFromCreator = Project::whereHas('projectCreators', function ($query) use ($user) {
+        $query->where('creator_project', $user->id);
+    })->with(['projectCreators'])->get();
+
+    // Gabungkan proyek dari peserta dan creator
+    $projects = $projectsFromParticipants->merge($projectsFromCreator);
+
+    // Ambil gambar creator dari proyek yang dibuat oleh pengguna
+    $creatorProjects = $projectsFromCreator->flatMap(function ($project) {
+        return $project->projectCreators->map(function ($creator) {
+            return $creator->pivot->creator_project;
+        });
+    });
+
+    // Ambil gambar creator dari user yang terlibat dalam proyek
+    $creatorPict = User::whereIn('id', $creatorProjects)->pluck('profile_pict')->first();
+
+    // Ambil gambar peserta untuk setiap proyek
+    $projectParticipants = $projects->flatMap(function ($project) {
+        return $project->participants->map(function ($participant) use ($project) {
+            return [
+                'project_id' => $project->id,
+                'project_name' => $project->name ?? 'Unknown Project',
+                'participants' => $project->participants->map(function ($participant) {
+                    return [
+                        'id' => $participant->id ?? null,
+                        'name' => $participant->name ?? 'Unknown',
+                        'profile_image' => $participant->profile_pict
+                            ? asset('storage/' . $participant->profile_pict)
+                            : asset('images/default-profile.png'),
+                    ];
+                })->toArray(),
+            ];
+        });
+    })->unique('project_id')->values();
+
+    // Bagikan data creatorPict ke view
+    view()->share('creatorPict', $creatorPict);
+
+    // Kirim data ke view
+    return view('layouts.dashboard', [
+        'projectParticipants' => $projectParticipants,
+        'projects' => $projects,
+        'creatorProjects' => $creatorProjects
+    ]);
+}
+
 
     public function searchProjects(Request $request)
     {
@@ -99,6 +105,12 @@ class DashboardController extends Controller
         $userNames = User::whereIn('id', $creatorProjects)->pluck('profile_pict');
         $creatorPict = $userNames->first();
 
+        if ($creatorPict) {
+            $creatorPict = asset('storage/' . $creatorPict);
+        } else {
+            $creatorPict = asset('images/default-profile.png');
+        }
+
         // Pass the $creatorPict to the view
         return view('layouts.dashboard', compact('projects', 'creatorPict'));
     }
@@ -108,6 +120,8 @@ class DashboardController extends Controller
 
     public function assignProject(Request $request)
     {
+
+        Log::info("message", ['data' => $request->all()]);
         // Mengubah peserta menjadi array jika datang sebagai string
         $participants = json_decode($request->input('participants'));
 
@@ -140,6 +154,7 @@ class DashboardController extends Controller
                 'updated_at' => now(),
             ];
         }
+        Log::info("message", ['data' => $data]);
 
         // Simpan data ke tabel projects_users
         \DB::table('projects_users')->insert($data);

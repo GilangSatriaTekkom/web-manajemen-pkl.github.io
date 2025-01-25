@@ -33,7 +33,7 @@ $validValues = ['peserta', 'pembimbing', 'dashboard', 'report', 'profile'];
                 </li>
                 <li class="<?= $secondValue === 'report' ? 'activate' : '' ?>">
                     @auth
-                    @if (Auth::user()->roles === 'admin')
+                    @if (Auth::user()->roles === 'admin' || Auth::user()->roles === 'pembimbing')
 
 
                     <a href="{{ route('report.index') }}" class="flex flex-row gap-3 px-4 py-2 hover:bg-[#DFE1F3] rounded">
@@ -149,11 +149,11 @@ $validValues = ['peserta', 'pembimbing', 'dashboard', 'report', 'profile'];
 
     // Menutup dropdown jika klik di luar elemen
     document.addEventListener('click', (event) => {
-        const dropdownButton = document.getElementById('dropdownButton');
-        const dropdownMenu = document.getElementById('dropdownMenu');
+        const dropdownButtonUsers = document.getElementById('dropdownButton');
+        const dropdownMenuPeserta = document.getElementById('dropdownMenu');
 
-        if (!dropdownButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
-            dropdownMenu.classList.add('hidden');
+        if (!dropdownButtonUsers.contains(event.target) && !dropdownMenuPeserta.contains(event.target)) {
+            dropdownMenuPeserta.classList.add('hidden');
         }
     });
 

@@ -31,7 +31,7 @@
                 <div class="relative">
                     <input type="checkbox" id="user-menu-toggle" class="hidden peer" />
                     <label for="user-menu-toggle" class="flex items-center cursor-pointer">
-                        <img class="w-14 h-14 rounded-full" src="{{ asset('storage/' . Auth::user()->profile_pict) }}" alt="">
+                        <img class="w-14 h-14 rounded-full" src="{{ Auth::user()->profile_pict ? asset('storage/' . Auth::user()->profile_pict) : asset('images/default-profile.png') }}" alt="">
                     </label>
 
                     <div
@@ -90,15 +90,15 @@
 
         <script>
             // Ambil elemen checkbox dan menu
-            const toggleMenu = document.getElementById("user-menu-toggle");
+            const toggleMenuProfile = document.getElementById("user-menu-toggle");
             const userMenu = document.getElementById("user-menu");
 
             // Menambahkan event listener untuk klik di luar modal
             document.addEventListener("click", function(event) {
                 // Cek jika klik terjadi di luar area dropdown
-                if (!userMenu.contains(event.target) && event.target !== toggleMenu) {
+                if (!userMenu.contains(event.target) && event.target !== toggleMenuProfile) {
                     // Matikan checkbox jika klik di luar dropdown
-                    toggleMenu.checked = false;
+                    toggleMenuProfile.checked = false;
                 }
             });
         </script>

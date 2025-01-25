@@ -57,6 +57,11 @@ class ReportController extends Controller
         $limit = $request->get('limit', 10);
         $reports = $query->paginate($limit);
 
-        return view('layouts.report', compact('reports'));
+         // Query untuk tabel tasks (tanpa filter pencarian atau waktu)
+        $taskQuery = Task::query();
+        $taskLimit = $request->get('task_limit', 10);
+        $tasks = $taskQuery->paginate($taskLimit);
+
+        return view('layouts.report', compact('reports', 'tasks'));
     }
 }

@@ -292,60 +292,83 @@ class TaskController extends Controller
 
 
 
-    public function updateBoard(Request $request)
-    {
-        $user = auth()->id();
-        // Validasi request untuk task_id dan board_id
-        $validated = $request->validate([
-            'task_id' => 'required|exists:tasks,id',
-        ]);
+public function updateBoard(Request $request)
+{
+    Log::info('Request received:', $request->all());
 
+    $user = auth()->id();
+
+    // Validasi request
+    $validated = $request->validate([
+        'task_id' => 'required|exists:tasks,id',
+        'imagesReportSubmit.*' => 'file|mimes:jpg,jpeg,png|max:2048', // Validasi file
+    ]);
+
+    $imagePaths = [];
+    if ($request->hasFile('imagesReportSubmit')) {
+        foreach ($request->file('imagesReportSubmit') as $image) {
+            // Simpan gambar di folder public/images
+            $imagePath = $image->store('images', 'public');
+            // Dapatkan path relatif untuk URL
+            $imageUrl = '/storage/' . $imagePath;
+            $imagePaths[] = $imageUrl;
+        }
+    } else {
+        \Log::warning('No images uploaded for task_id: ' . $validated['task_id']);
+    }
+
+
+    DB::beginTransaction();
+    try {
         $task = Task::find($validated['task_id']);
 
         if ($task) {
-            // Simpan nilai board_id sebelumnya untuk log dan respon
             $oldBoardId = $task->board_id;
-
             \Log::info('Before Update: ', ['task_id' => $task->id, 'board_id' => $oldBoardId]);
 
-            // Logika perubahan board_id dan update status task
             switch ($oldBoardId) {
-                case 1: // In Progress
+                case 1:
                     $task->board_id = 2;
-                    $task->status = 'in_progress'; // Mengupdate status ke 'in_progress'
-                    Task::where('id', $validated['task_id'])
-                        ->update(['worked_by' => $user]);
-                    break;
-
-                case 2: // Done
-                    $task->board_id = 3;
-                    $task->status = 'done'; // Mengupdate status ke 'done'
+                    $task->status = 'in_progress';
+                    $task->worked_by = $user;
 
                     $projectName = Project::where('id', $task->project_id)->first();
                     $workedByUser = User::where('id', $task->worked_by)->first();
-
-                    // Buat entri baru di tabel Report
-                    $updateReport = Report::create([
+                    Report::create([
                         'project_name' => $projectName->name,
-                        'task_name' => $task->title, // Ambil title dari task
-                        'status' => 'done', // Status baru
-                        'time' => now(), // Waktu saat ini
+                        'task_name' => $task->title,
+                        'status' => 'In Progress',
+                        'time' => now(),
                         'worked_by' => $workedByUser->name,
+                        'image' => "Masih dikerjakan",
                     ]);
 
                     break;
 
+                case 2:
+                    $task->board_id = 3;
+                    $task->status = 'done';
+
+                    $projectName = Project::where('id', $task->project_id)->first();
+                    $workedByUser = User::where('id', $task->worked_by)->first();
+                    \Log::info('imagePaths: ', [$imagePaths[0]]);
+
+                    Report::create([
+                        'project_name' => $projectName->name,
+                        'task_name' => $task->title,
+                        'status' => 'done',
+                        'time' => now(),
+                        'worked_by' => $workedByUser->name,
+                        'image' => $imagePaths[0],
+                    ]);
+                    break;
+
                 default:
-                    // Jika board_id tidak valid, kembalikan dengan error
-                    return response()->json([
-                        'message' => 'Invalid board_id',
-                        'success' => false,
-                        'error' => 'The provided board_id is not valid.',
-                    ], 400);
+                    throw new \Exception('Invalid board_id');
             }
 
-            // Simpan perubahan pada task
             $task->save();
+            DB::commit();
 
             \Log::info('After Update: ', [
                 'task_id' => $task->id,
@@ -354,7 +377,6 @@ class TaskController extends Controller
                 'new_status' => $task->status,
             ]);
 
-            // Respon sukses dengan informasi tambahan
             return response()->json([
                 'message' => 'Task updated successfully',
                 'success' => true,
@@ -368,17 +390,18 @@ class TaskController extends Controller
             ]);
         }
 
-        // Respon error jika task tidak ditemukan
-        \Log::error('Task not found: ', ['task_id' => $validated['task_id']]);
+        throw new \Exception('Task not found');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error updating task:', ['error' => $e->getMessage()]);
         return response()->json([
-            'message' => 'Task not found',
+            'message' => 'Failed to update task',
             'success' => false,
-            'error' => [
-                'task_id' => $validated['task_id'],
-                'reason' => 'Task does not exist or already deleted.',
-            ],
-        ], 404);
+        ], 500);
     }
+}
+
+
 
     public function editData($projectId, $taskId)
     {
@@ -486,6 +509,39 @@ class TaskController extends Controller
             'message' => 'Task berhasil diperbarui!',
             'task' => $task,
         ]);
+    }
+
+    public function destroy($taskId)
+    {
+        try {
+            // Cari task berdasarkan ID
+            $task = Task::findOrFail($taskId);
+
+            // Jika task memiliki gambar, hapus file dari storage
+            if ($task->image) {
+                $imagePath = storage_path('app/' . $task->image);
+                if (file_exists($imagePath)) {
+                    unlink($imagePath);
+                }
+            }
+
+            // Hapus task dari database
+            $task->delete();
+
+            return response()->json([
+                'message' => 'Task berhasil dihapus.',
+                'task_id' => $taskId,
+            ], 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'error' => 'Task tidak ditemukan.',
+            ], 404);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Terjadi kesalahan saat menghapus task.',
+                'details' => $e->getMessage(),
+            ], 500);
+        }
     }
 
 

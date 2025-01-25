@@ -6,12 +6,10 @@
         @include('layouts.partials.sidebar')
         <div class="bg-white shadow-md rounded-lg p-6 ml-64 w-full">
             @include('layouts.partials.header')
-            <h1 class="text-2xl font-semibold text-center text-blue-600 mb-4">User Profile</h1>
 
             <!-- Profile Picture -->
-            <form action="{{ route('profile.profileUpload', ['id' => Auth::id()]) }}" method="POST" enctype="multipart/form-data" class="mt-4">
+            <form action="{{ route('profile.profileUpload', ['id' => (Auth::id() != $user->id ? $user->id : Auth::id())]) }}" method="POST" enctype="multipart/form-data" class="mt-4">
                 <div class="text-center flex flex-col items-center">
-                    <label for="profile_picture" class="block text-gray-700 mb-2">Profile Picture:</label>
                     @csrf
                     <!-- Profile Picture Image -->
                     <img id="profileImage" src="{{ $profilePicture }}" alt="Profile Picture"
@@ -64,19 +62,20 @@
                         <label for="roles" class="block text-gray-700">Roles:</label>
                         <select id="roles" name="roles"
                             class="w-full border border-gray-300 rounded-lg py-2 px-4 focus:ring-2 focus:ring-blue-400 focus:outline-none
-                            @if(Auth::id() !== $user->id) disabled-input @endif">
+                            @if(Auth::user()->roles == 'peserta') disabled-input @endif">
                             <option value="admin" {{ $user->roles == 'admin' ? 'selected' : '' }}>Admin</option>
                             <option value="peserta" {{ $user->roles == 'peserta' ? 'selected' : '' }}>Peserta</option>
                             <option value="pembimbing" {{ $user->roles == 'pembimbing' ? 'selected' : '' }}>Pembimbing</option>
                         </select>
                     </div>
 
-                    <!-- Asal Sekolah -->
                     <div>
-                        <label for="asal_sekolah" class="block text-gray-700">Asal Sekolah:</label>
-                        <input type="text" id="asal_sekolah" name="asal_sekolah" value="{{ $user->asal_sekolah }}"
-                            class="w-full border border-gray-300 rounded-lg py-2 px-4 focus:ring-2 focus:ring-blue-400 focus:outline-none
-                            @if(Auth::id() !== $user->id) disabled-input @endif">
+                        @if($user->roles === 'peserta')
+                            <label for="asal_sekolah" class="block text-gray-700">Asal Sekolah:</label>
+                            <input type="text" id="asal_sekolah" name="asal_sekolah" value="{{ $user->asal_sekolah }}"
+                                class="w-full border border-gray-300 rounded-lg py-2 px-4 focus:ring-2 focus:ring-blue-400 focus:outline-none
+                                @if(Auth::id() !== $user->id) disabled-input @endif">
+                        @endif
                     </div>
                 </div>
 
@@ -98,15 +97,13 @@
 
 
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', function () {
     const confirmEditButton = document.getElementById('confirmEditButton');
-
-    // Ambil semua elemen input berdasarkan ID
     const inputs = [
         document.getElementById('name'),
         document.getElementById('email'),
         document.getElementById('password'),
-        document.getElementById('roles'),
+        document.getElementById('roles'), // Dropdown untuk roles
         document.getElementById('asal_sekolah'),
         document.getElementById('inputFile')
     ];
@@ -117,7 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Cek setiap input apakah ada perubahan
         inputs.forEach(input => {
+            if (input && input.value !== input.defaultValue) {
                 hasChanged = true;
+            }
         });
 
         // Menampilkan atau menyembunyikan tombol Confirm Edit
@@ -128,9 +127,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Menambahkan event listener untuk setiap input
+    // Menggunakan MutationObserver untuk mendeteksi perubahan pada select
+    const observer = new MutationObserver(checkChanges);
+
+    // Konfigurasi observer
+    const config = { attributes: true, childList: true, subtree: true };
+
+    // Menambahkan observer untuk elemen select
+    const rolesSelect = document.getElementById('roles');
+    if (rolesSelect) {
+        observer.observe(rolesSelect, config);
+    }
+
+    // Menambahkan event listener untuk input lainnya
     inputs.forEach(input => {
-        input.addEventListener("input", checkChanges); // Cek perubahan setiap kali input berubah
+        if (input) {
+            input.addEventListener("input", checkChanges); // Cek perubahan pada input lainnya
+        }
     });
 });
 

@@ -15,5 +15,6 @@ class Report extends Model
         'status',
         'time',
         'worked_by',
+        'image'
     ];
 }

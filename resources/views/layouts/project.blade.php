@@ -48,13 +48,15 @@
                     </h3>
 
                     <!-- Tombol untuk menambahkan kartu -->
+                    @if ($roles)
                     <div class="bg-white p-2 rounded shadow mb-3 cursor-pointer {{ $column['id'] == 1 ? '' : 'hidden' }}">
-                        @if ($roles)
+
                             <button id="addTaskButton" class="w-full bg-white font-bold text-black text-sm py-2"
                                 onclick="newCard()">+ Tambah Tugas
                             </button>
-                        @endif
+
                     </div>
+                    @endif
 
 
 
@@ -177,7 +179,8 @@
                                             <div class="flex flex-row align-middle">
 
                                                 <h3 id="popupTitle" class="text-xl font-semibold"></h3>
-                                                <button class="ml-4 scale-75 button" onclick="editTask()">Edit Task</button>
+                                                <button class="ml-4 button text-[12px]" onclick="editTask()">Edit Task</button>
+                                                <button class="ml-1 button-alert text-[12px]" onclick="deleteTask()">Delete Task</button>
                                             </div>
                                             <button id="exitButton"
                                                 class="justify-end text-2xl text-gray-700 hover:text-gray-900 focus:outline-none">
@@ -422,6 +425,33 @@
                                 </div>
                             </form>
 
+                        </div>
+                    </div>
+
+                    <div id="modalImageBukti" class=" add-card hidden fixed inset-0 bg-gray-800 bg-opacity-50 items-center justify-center" onclick="closeModalOnOutsideClickImageSubmit(event)">
+                        <div class=" bg-white rounded-lg p-6 w-1/3 card-layout-scoll"  onclick="event.stopPropagation()">
+                            <h2 class="text-xl font-semibold mb-4">Submit bukti pengerjaan</h2>
+                            <form method="POST" enctype="multipart/form-data" id ="formImageBukti">
+                                @csrf
+                                <input type="hidden" name="project_id" value="{{ $project->id }}">
+                                <input type="hidden" name="taskId" id="taskIdInput">
+
+
+                                <div class="mb-4">
+                                    <label for="Images" class="block text-sm font-medium text-gray-700">Images</label>
+                                    <div id="images-container-task-edit">
+                                        <div class="flex items-center mb-2">
+                                            <input type="file" name="imagesReportSubmit[]" accept="image/*" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                            <button type="button" onclick="addImageEdit()" class="ml-2 text-blue-600">Add Image</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end">
+                                    <button type="button" onclick="closeModalImageSubmit()" class="text-gray-600 hover:text-gray-900 mr-3">Cancel</button>
+                                    <button type="button" onclick="handleImageSubmit()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Submit Image</button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
