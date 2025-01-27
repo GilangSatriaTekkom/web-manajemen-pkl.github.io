@@ -8,7 +8,7 @@
             @include('layouts.partials.header')
 
             <!-- Profile Picture -->
-            <form action="{{ route('profile.profileUpload', ['id' => (Auth::id() != $user->id ? $user->id : Auth::id())]) }}" method="POST" enctype="multipart/form-data" class="mt-4">
+            <form id="formProfileUpdate" action="{{ route('profile.profileUpload', ['id' => (Auth::id() != $user->id ? $user->id : Auth::id())]) }}" method="POST" enctype="multipart/form-data" class="mt-4">
                 <div class="text-center flex flex-col items-center">
                     @csrf
                     <!-- Profile Picture Image -->
@@ -79,8 +79,8 @@
                     </div>
                 </div>
 
-                <div class="flex justify-end items-center mt-6">
-                    <button id="confirmEditButton" type="submit" class="hidden flex items-center bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                <div id="confirmEditButton" class="hidden flex justify-end items-center mt-6">
+                    <button id="confirmButton" type="button" onclick="showConfirmation(event)" class="flex items-center bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
                         Confirm Edit
                     </button>
                 </div>
@@ -95,6 +95,24 @@
 
 <script>
 
+function showConfirmation(event) {
+        event.preventDefault(); // Mencegah form dikirimkan langsung
+
+        // Menampilkan SweetAlert konfirmasi
+        Swal.fire({
+            title: 'Yakin mengupdate profile ?',
+            text: 'Pastikan data yang diubah sudah benar',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, sudah yakin!',
+            cancelButtonText: 'Tidak, kembali'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Jika pengguna mengonfirmasi, kirimkan form
+                document.getElementById("formProfileUpdate").submit(); // Ganti dengan ID form Anda
+            }
+        });
+    }
 
 
 document.addEventListener('DOMContentLoaded', function () {

@@ -149,6 +149,19 @@
                         <hr class="my-2">
                         <div class="flex flex-row gap-2 justify-between">
                             <!-- Kolom Komentar dan File -->
+                            @if($task['comment_count'] > 0 || $task['file_count'] > 0)
+                                <hr class="my-2">
+                            @endif
+                             <!-- Kolom Peserta yang Mengerjakan Task -->
+                             @if($task->workedBy && $task->workedBy->isNotEmpty())
+                             <div class="participants flex gap-2">
+                                 @foreach($task->workedBy as $worker)
+                                     <div class="participant">
+                                         <img src="{{ $worker->profile_picture_url }}" alt="{{ $worker->name }}'s profile picture" class="w-8 h-8 rounded-full">
+                                     </div>
+                                 @endforeach
+                             </div>
+                         @endif
                             @if($task['comment_count'] > 0)
                                 <div class="comment_indicator flex flex-row gap-2 items-center">
                                     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -166,6 +179,7 @@
                                 </div>
                             @endif
                         </div>
+
                     </div>
                     @endforeach
 
@@ -342,26 +356,6 @@
                                         </div>
                                     </div>
                                 </div>
-
-
-                                {{-- <div class="mb-4">
-                                    <label for="tasks" class="block text-sm font-medium text-gray-700">Tasks</label>
-                                    <div id="tasks-container">
-                                        <div class="flex items-center mb-2">
-                                            <input type="checkbox" name="tasks[]" value="Task 1" class="mr-2">
-                                            <label for="tasks[]" class="text-sm text-gray-700">Task 1</label>
-                                        </div>
-                                        <div class="flex items-center mb-2">
-                                            <input type="checkbox" name="tasks[]" value="Task 2" class="mr-2">
-                                            <label for="tasks[]" class="text-sm text-gray-700">Task 2</label>
-                                        </div>
-                                        <div class="flex items-center mb-2">
-                                            <input type="checkbox" name="tasks[]" value="Task 3" class="mr-2">
-                                            <label for="tasks[]" class="text-sm text-gray-700">Task 3</label>
-                                        </div>
-                                        <button type="button" onclick="addTask()" class="mt-2 text-blue-600">Add Task</button>
-                                    </div>
-                                </div> --}}
 
                                 <div class="flex justify-end">
                                     <button type="button" onclick="newCard()" class="text-gray-600 hover:text-gray-900 mr-3">Cancel</button>
@@ -956,54 +950,69 @@ function handleFormSubmission() {
     const imageInputs = document.querySelectorAll('[name="images[]"]');
     const links = Array.from(document.querySelectorAll('[name="links[]"]')).map(input => input.value);
 
+    // Tampilkan alert konfirmasi sebelum melanjutkan
+    Swal.fire({
+        title: 'Yakin ingin menambahkan task baru?',
+        text: 'Pastikan seluruh input diisi dengan benar.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya',
+        cancelButtonText: 'Tidak',
+        reverseButtons: false // Tombol "Ya" di kiri, "Tidak" di kanan
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Jika pengguna menekan "Ya", lanjutkan proses pengiriman form
 
-    // Buat FormData untuk mengirim gambar ke server
-    const formData = new FormData();
+            // Buat FormData untuk mengirim gambar ke server
+            const formData = new FormData();
 
+            // Loop untuk setiap input gambar dan tambahkan ke FormData
+            imageInputs.forEach(input => {
+                const files = input.files;
+                if (files.length > 0) {
+                    formData.append('images[]', files[0]); // Mengambil file pertama dari setiap input
+                }
+            });
 
-    // Loop untuk setiap input gambar dan tambahkan ke FormData
-    imageInputs.forEach(input => {
-        const files = input.files;
-        if (files.length > 0) {
-            formData.append('images[]', files[0]); // Mengambil file pertama dari setiap input
+            // Kirim gambar ke server menggunakan AJAX
+            if (formData.has('images[]')) {
+                fetch(`/upload-image`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Jika ada gambar, sisipkan URL gambar ke Quill
+                    if (data.imageUrls) {
+                        quillEditor.insertEmbed(quillEditor.getLength() - 1, 'image', { image: data.imageUrls });
+                    }
+
+                    // Lanjutkan proses pengiriman form
+                    finalizeSubmission(quillEditor, links, title, data.imageUrls);
+                })
+                .catch(error => {
+                    console.error('Error uploading image:', error);
+                    // Tetap lanjutkan pengiriman form meskipun ada error
+                    finalizeSubmission(quillEditor, links, title);
+                });
+
+            } else {
+                // Jika tidak ada gambar, langsung lanjutkan pengiriman form
+                finalizeSubmission(quillEditor, links, title);
+            }
+        } else {
+            // Jika pengguna menekan "Tidak", batalkan pengiriman form
+            console.log('Pengguna membatalkan penambahan task baru.');
         }
     });
-
-    // Kirim gambar ke server menggunakan AJAX
-    if (formData.has('images[]')) {
-        fetch(`/upload-image`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Jika ada gambar, sisipkan URL gambar ke Quill
-
-            if (data.imageUrls) {
-                quillEditor.insertEmbed(quillEditor.getLength() - 1, 'image', { image: data.imageUrls });
-            }
-
-            // Lanjutkan proses pengiriman form
-            finalizeSubmission(quillEditor, links, title, data.imageUrls);
-        })
-        .catch(error => {
-            console.error('Error uploading image:', error);
-            // Tetap lanjutkan pengiriman form meskipun ada error
-            finalizeSubmission(quillEditor, links, title, imageUrls);
-        });
-
-    } else {
-        // Jika tidak ada gambar, langsung lanjutkan pengiriman form
-        finalizeSubmission(quillEditor, links, title);
-    }
 }
 
 
-function finalizeSubmission(quillEditor, links, title, imageUrls) {
 
+function finalizeSubmission(quillEditor, links, title, imageUrls) {
     // Validasi dan perbaiki link
     const validatedLinks = links.map(link => {
         if (link && !/^https?:\/\/(www\.)?/.test(link)) {
@@ -1036,7 +1045,6 @@ function finalizeSubmission(quillEditor, links, title, imageUrls) {
     const formData = new FormData(document.querySelector('#taskForm'));
     const formObject = {};
 
-
     // Mengonversi FormData menjadi objek
     formData.forEach((value, key) => {
         formObject[key] = value;
@@ -1061,17 +1069,35 @@ function finalizeSubmission(quillEditor, links, title, imageUrls) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Task berhasil diperbarui!');
-            // Merefresh halaman
-            window.location.reload();
+            Swal.fire({
+                title: 'Berhasil!',
+                text: 'Selamat, task baru telah ditambahkan!',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                // Merefresh halaman setelah pengguna menutup dialog
+                window.location.reload();
+            });
         } else {
-            alert('Terjadi kesalahan saat mengedit task');
+            Swal.fire({
+                title: 'Gagal!',
+                text: 'Terjadi kesalahan saat menambahkan task',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
         }
     })
     .catch(error => {
         console.error('Error submitting form:', error);
+        Swal.fire({
+            title: 'Error!',
+            text: 'Terjadi kesalahan saat menambahkan task',
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
     });
 }
+
 
 
 
@@ -1079,117 +1105,110 @@ function finalizeSubmission(quillEditor, links, title, imageUrls) {
 // ---------------------------EDIT GAMBAR LINK DAN DESCRIPTION TASK----------------------
 
 function handleEditTask() {
-    const pathname = window.location.pathname;
-    const taskId = pathname.split("/")[4];
-    // Ambil kontainer Quill
-    const quillEditor = document.querySelector('#description-container-edit').__quill;
-
-    // Ambil data dari input gambar (bisa banyak gambar)
-    const imageInputs = document.querySelectorAll('[name="imagesEdit[]"]');
-
-    console.log(imageInputs);
-
-
-    // Buat FormData untuk mengirim gambar ke server
-    const formData = new FormData();
-
-
-
-    // Loop untuk setiap input gambar dan tambahkan ke FormData
-    imageInputs.forEach(input => {
-        if (input.files && input.files.length > 0) { // Periksa jika files tidak null dan ada file
-            test = formData.append('imagesEdit[]', input.files[0]); // Mengambil file pertama dari setiap input
-        } else {
-            console.log("Tidak ada file yang dipilih atau input tidak valid.");
+    // Tampilkan alert konfirmasi menggunakan Swal
+    Swal.fire({
+        title: 'Yakin ingin mengedit task?',
+        text: 'Pastikan seluruh input sudah sesuai.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Edit Task',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (!result.isConfirmed) {
+            // Jika pengguna memilih "Batal," hentikan eksekusi
+            return;
         }
-    });
 
-    console.log(formData.has('imagesEdit[]'));
+        const pathname = window.location.pathname;
+        const taskId = pathname.split("/")[4];
+        // Ambil kontainer Quill
+        const quillEditor = document.querySelector('#description-container-edit').__quill;
 
-
-
-
-    // Kirim gambar ke server menggunakan AJAX
-    if (formData.has('imagesEdit[]')) {
-        fetch(`/upload-image`, { // Ganti dengan route yang sesuai di Laravel
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-            .then(response => response.json())
-            .then(data => {
-                 // Jika ada gambar yang sudah ada (dari database atau server), sisipkan URL gambar ke Quill
-                if (data.imageUrls) {
-                    data.imageUrls.forEach(imageUrl => {
-                        quillEditor.insertEmbed(quillEditor.getLength(), 'image', imageUrl);
-                    });
-                }
-
-                const imageInputs = document.querySelectorAll('[name="imagesEdit[]"]');
-
-                // Ekstrak nilai value dari setiap elemen input
-                const imageUrls = Array.from(imageInputs)
-                    .map(input => input.value) // Ambil nilai
-                    .filter(value => {
-            // Filter untuk memastikan nilai yang valid
-                        return value !== '' &&
-                            !value.includes('C:\\fakepath\\') &&  // Menghindari path lokal
-                            !value.startsWith('blob:') &&         // Menghindari blob URL
-                            !value.startsWith('//');              // Menghindari URL yang tidak lengkap
-                    });
-
-                // Menambahkan setiap gambar baru ke Quill editor satu per satu
-                imageUrls.forEach(imageUrl => {
-                    quillEditor.insertEmbed(quillEditor.getLength(), 'image', imageUrl);
-                });
-
-                // Lanjutkan proses pengiriman form
-                finalizeEditSubmission(quillEditor, taskId, [...data.imageUrls, ...imageUrls]); // Gabungkan gambar yang sudah ada dan gambar baru
-
-            })
-            .catch(error => {
-                console.error('Error uploading image:', error);
-                // Tetap lanjutkan pengiriman form meskipun ada error
-                finalizeEditSubmission(quillEditor, taskId);
-            });
-    } else {
+        // Ambil data dari input gambar (bisa banyak gambar)
         const imageInputs = document.querySelectorAll('[name="imagesEdit[]"]');
 
-        // Ekstrak nilai value dari setiap elemen input
-        const imageUrls = Array.from(imageInputs)
-            .map(input => input.value) // Ambil nilai
-            .filter(value => value !== ''); // Hanya ambil yang tidak kosong
+        // Buat FormData untuk mengirim gambar ke server
+        const formData = new FormData();
 
-        // Menambahkan setiap gambar ke Quill editor satu per satu
-        imageUrls.forEach(imageUrl => {
-            quillEditor.insertEmbed(quillEditor.getLength() - 1, 'image', imageUrl);
+        // Loop untuk setiap input gambar dan tambahkan ke FormData
+        imageInputs.forEach(input => {
+            if (input.files && input.files.length > 0) { // Periksa jika files tidak null dan ada file
+                formData.append('imagesEdit[]', input.files[0]); // Mengambil file pertama dari setiap input
+            }
         });
 
-        // Kirim data ke fungsi finalizeEditSubmission
-        finalizeEditSubmission(quillEditor, taskId, imageUrls);
-    }
+        // Kirim gambar ke server menggunakan AJAX
+        if (formData.has('imagesEdit[]')) {
+            fetch(`/upload-image`, { // Ganti dengan route yang sesuai di Laravel
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // Jika ada gambar yang sudah ada, sisipkan URL gambar ke Quill
+                    if (data.imageUrls) {
+                        data.imageUrls.forEach(imageUrl => {
+                            quillEditor.insertEmbed(quillEditor.getLength(), 'image', imageUrl);
+                        });
+                    }
+
+                    const imageInputs = document.querySelectorAll('[name="imagesEdit[]"]');
+
+                    // Ekstrak nilai value dari setiap elemen input
+                    const imageUrls = Array.from(imageInputs)
+                        .map(input => input.value)
+                        .filter(value => value !== '');
+
+                    // Tambahkan gambar baru ke Quill editor
+                    imageUrls.forEach(imageUrl => {
+                        quillEditor.insertEmbed(quillEditor.getLength(), 'image', imageUrl);
+                    });
+
+                    // Lanjutkan proses pengiriman form
+                    finalizeEditSubmission(quillEditor, taskId, [...data.imageUrls, ...imageUrls]);
+                })
+                .catch(error => {
+                    console.error('Error uploading image:', error);
+                    Swal.fire('Error', 'Gagal mengunggah gambar. Silakan coba lagi.', 'error');
+                    finalizeEditSubmission(quillEditor, taskId);
+                });
+        } else {
+            const imageInputs = document.querySelectorAll('[name="imagesEdit[]"]');
+
+            // Ekstrak nilai value dari setiap elemen input
+            const imageUrls = Array.from(imageInputs)
+                .map(input => input.value)
+                .filter(value => value !== '');
+
+            // Tambahkan gambar ke Quill editor
+            imageUrls.forEach(imageUrl => {
+                quillEditor.insertEmbed(quillEditor.getLength() - 1, 'image', imageUrl);
+            });
+
+            // Kirim data ke fungsi finalizeEditSubmission
+            finalizeEditSubmission(quillEditor, taskId, imageUrls);
+        }
+    });
 }
 
-function finalizeEditSubmission(quillEditor, taskId, imageUrls) {
 
+
+function finalizeEditSubmission(quillEditor, taskId, imageUrls) {
     console.log(imageUrls);
 
-
-    // Ambil data dari form dan tambahkan taskId
     const formData = new FormData(document.querySelector('#taskEdit'));
     const formObject = {};
 
-    // Mengonversi FormData menjadi objek
     formData.forEach((value, key) => {
         formObject[key] = value;
     });
 
-    // Ambil link dari formData dan validasi
     const formLinks = formData.getAll('linksEdit[]');
-
-    // Validasi dan perbaiki link
     const validatedLinks = formLinks.map(link => {
         if (link && !/^https?:\/\/(www\.)?/.test(link)) {
             if (/^https?:\/\//.test(link)) {
@@ -1201,57 +1220,64 @@ function finalizeEditSubmission(quillEditor, taskId, imageUrls) {
         return link;
     });
 
-    // Menyisipkan link ke dalam konten Quill setelah gambar
     validatedLinks.forEach(link => {
         if (link) {
             quillEditor.insertText(quillEditor.getLength() - 1, link, { link: link });
         }
     });
 
-    // Mengambil URL gambar dari Quill atau imageUrls yang telah diberikan
     let imageUrlData = null;
     if (imageUrls && imageUrls.length > 0) {
-        // Jika ada gambar, ambil URL gambar
         imageUrlData = { images: imageUrls };
     }
 
-
-    // Mengirimkan konten Quill ke input hidden untuk dikirimkan ke server
     document.querySelector('#descriptionTaskEdit').value = JSON.stringify(quillEditor.getContents());
 
-    // Menambahkan taskId dan image ke dalam objek formObject
     formObject.taskId = taskId;
-    formObject.description = JSON.stringify(quillEditor.getContents()); // Menambahkan konten Quill
+    formObject.description = JSON.stringify(quillEditor.getContents());
 
     if (imageUrlData) {
-        formObject.images = imageUrlData.images; // Menambahkan URL gambar ke formObject
+        formObject.images = imageUrlData.images;
     }
 
-    // Mengirimkan data dengan JSON
     fetch(`/tasks/${taskId}/edit`, {
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Content-Type': 'application/json' // Pastikan header Content-Type adalah 'application/json'
+            'Content-Type': 'application/json'
         },
         method: 'POST',
-        body: JSON.stringify(formObject), // Mengirimkan data dalam format JSON
+        body: JSON.stringify(formObject),
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Task berhasil diperbarui!');
-            // Merefresh halaman
-            window.location.reload();
+            Swal.fire({
+                title: 'Berhasil!',
+                text: 'Task berhasil diperbarui!',
+                icon: 'success',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                window.location.reload();
+            });
         } else {
-            alert('Terjadi kesalahan saat mengedit task');
+            Swal.fire({
+                title: 'Gagal!',
+                text: 'Terjadi kesalahan saat mengedit task',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
         }
     })
     .catch(error => {
         console.error('Error submitting form:', error);
+        Swal.fire({
+            title: 'Error!',
+            text: 'Terjadi kesalahan saat mengedit task',
+            icon: 'error',
+            confirmButtonText: 'OK'
+        });
     });
 }
-
-
 
 
 

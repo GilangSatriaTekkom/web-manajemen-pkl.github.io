@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ProjectUser extends Model
 {
-    protected $table = 'project_user';
+    protected $table = 'projects_users';
     protected $fillable = ['user_id', 'project_id', 'creator_project', 'created_at', 'updated_at'];
 
     // Menambahkan relasi

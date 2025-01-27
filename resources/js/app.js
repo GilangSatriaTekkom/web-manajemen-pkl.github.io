@@ -705,3 +705,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Fungsi untuk menambahkan komentar
 });
+
+window.addEventListener("load", function () {
+    // Setelah halaman selesai dimuat, sembunyikan elemen loading
+    const loadingOverlay = document.getElementById("loading-overlay");
+    if (loadingOverlay) {
+        loadingOverlay.style.display = "none"; // Menyembunyikan overlay
+    }
+});

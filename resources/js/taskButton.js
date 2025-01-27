@@ -13,87 +13,113 @@ document.addEventListener("DOMContentLoaded", function () {
         const finishButton = document.getElementById("finishTaskButton");
 
         if (status === "in_progress") {
-            // Jika menekan "Mulai Pekerjaan" atau "Lanjutkan Pekerjaan"
-            startButton.classList.add("hidden");
-            // stopButton.classList.remove("hidden");
-            resumeButton.classList.add("hidden");
-            finishButton.classList.remove("hidden");
+            // Menampilkan SweetAlert2 konfirmasi
+            Swal.fire({
+                title: "Yakin ingin mengerjakan?",
+                text: "Pastikan kamu sudah siap untuk mengerjakan task ini!.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Ya",
+                cancelButtonText: "Tidak",
+                reverseButtons: false,
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Jika "Ya" ditekan, lanjutkan eksekusi kode
+                    startButton.classList.add("hidden");
+                    resumeButton.classList.add("hidden");
+                    finishButton.classList.remove("hidden");
 
-            const pathname = window.location.pathname;
-            const taskId = pathname.split("/")[4];
-            console.log(taskId);
-            axios
-                .post("/tasks/update", {
-                    task_id: taskId,
-                    board_id: boardId,
-                })
-                .then((response) => {
-                    console.log(
-                        "Board ID updated successfully:",
-                        response.data
-                    );
-                    // Tambahkan logic untuk memperbarui tampilan
-                    return response.data;
-                })
-                .then((data) => {
-                    console.log("Mulai proses pembaruan task...", data);
-
-                    // Cari elemen dengan ID yang sesuai (task)
-                    const targetElement = document.getElementById(
-                        `task-${data.task.id}`
-                    );
-
-                    // Cari elemen board-column yang baru berdasarkan ID
-                    const newBoardColumn = document.getElementById(
-                        `board-column-${data.task.new_board_id}`
-                    );
-
-                    if (newBoardColumn) {
-                        // Jika board-column ditemukan, pindahkan task ke board baru
-                        newBoardColumn.appendChild(targetElement);
-                        console.log(
-                            `Task dengan ID ${data.id} dipindahkan ke board-column-${data.new_board_id}.`
-                        );
-                    } else {
-                        // Jika board-column tidak ditemukan
-                        console.error(
-                            `Tidak ada elemen untuk board-column-${data.new_board_id}.`
-                        );
-                        // Kirim log kesalahan ke Laravel
-                        fetch("/log-js-error", {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                                message: `Tidak ada elemen untuk board-column-${data.new_board_id}.`,
-                                context: { data },
-                            }),
+                    const pathname = window.location.pathname;
+                    const taskId = pathname.split("/")[4];
+                    console.log(taskId);
+                    axios
+                        .post("/tasks/update", {
+                            task_id: taskId,
+                            board_id: boardId,
                         })
-                            .then(() => {
-                                console.log(
-                                    `Log kesalahan dikirim ke server: Tidak ada elemen untuk board-column-${data.new_board_id}.`
-                                );
-                            })
-                            .catch((error) => {
-                                console.error(
-                                    "Gagal mengirim log ke Laravel:",
-                                    error
-                                );
-                            });
-                    }
-                })
-                .catch((error) => {
-                    console.error("Error updating Board ID:", error);
-                });
+                        .then((response) => {
+                            console.log(
+                                "Board ID updated successfully:",
+                                response.data
+                            );
+                            // Tambahkan logic untuk memperbarui tampilan
+                            return response.data;
+                        })
+                        .then((data) => {
+                            console.log("Mulai proses pembaruan task...", data);
 
-            // Timer mulai berjalan
-            if (!timer) {
-                timer = setInterval(() => {
-                    elapsedTime++;
-                    console.log(`Waktu berjalan: ${elapsedTime} detik`);
-                }, 1000);
-            }
+                            // Cari elemen dengan ID yang sesuai (task)
+                            const targetElement = document.getElementById(
+                                `task-${data.task.id}`
+                            );
+
+                            // Cari elemen board-column yang baru berdasarkan ID
+                            const newBoardColumn = document.getElementById(
+                                `board-column-${data.task.new_board_id}`
+                            );
+
+                            if (newBoardColumn) {
+                                // Jika board-column ditemukan, pindahkan task ke board baru
+                                newBoardColumn.appendChild(targetElement);
+                                console.log(
+                                    `Task dengan ID ${data.id} dipindahkan ke board-column-${data.new_board_id}.`
+                                );
+
+                                // Tampilkan alert dan refresh halaman setelah berhasil
+                                Swal.fire({
+                                    title: "Task diperbarui",
+                                    text: "Selamat mengerjakan!",
+                                    icon: "success",
+                                    confirmButtonText: "OK",
+                                }).then(() => {
+                                    // Refresh halaman setelah user menekan tombol OK
+                                    window.location.reload();
+                                });
+                            } else {
+                                // Jika board-column tidak ditemukan
+                                console.error(
+                                    `Tidak ada elemen untuk board-column-${data.new_board_id}.`
+                                );
+                                // Kirim log kesalahan ke Laravel
+                                fetch("/log-js-error", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                    },
+                                    body: JSON.stringify({
+                                        message: `Tidak ada elemen untuk board-column-${data.new_board_id}.`,
+                                        context: { data },
+                                    }),
+                                })
+                                    .then(() => {
+                                        console.log(
+                                            "Log kesalahan dikirim ke server: Tidak ada elemen untuk board-column-${data.new_board_id}."
+                                        );
+                                    })
+                                    .catch((error) => {
+                                        console.error(
+                                            "Gagal mengirim log ke Laravel:",
+                                            error
+                                        );
+                                    });
+                            }
+                        })
+                        .catch((error) => {
+                            console.error("Error updating Board ID:", error);
+                        });
+
+                    // Timer mulai berjalan
+                    if (!timer) {
+                        timer = setInterval(() => {
+                            elapsedTime++;
+                            console.log(`Waktu berjalan: ${elapsedTime} detik`);
+                        }, 1000);
+                    }
+                } else {
+                    // Jika "Tidak" ditekan, tampilkan pesan pembatalan
+                    console.log("Pekerjaan dibatalkan.");
+                }
+            });
         } else if (status === "paused") {
             // Jika menekan "Hentikan Pekerjaan"
             // stopButton.classList.add("hidden");
@@ -204,6 +230,17 @@ document.addEventListener("DOMContentLoaded", function () {
                             );
                         });
                 }
+
+                // Tampilkan SweetAlert setelah proses selesai
+                Swal.fire({
+                    title: "Task sudah selesai!",
+                    text: "Terimakasih sudah mengerjakan.",
+                    icon: "success",
+                    confirmButtonText: "OK",
+                }).then(() => {
+                    // Refresh halaman setelah alert ditutup
+                    location.reload();
+                });
             })
             .catch((error) => {
                 console.error("Error updating Board ID:", error);

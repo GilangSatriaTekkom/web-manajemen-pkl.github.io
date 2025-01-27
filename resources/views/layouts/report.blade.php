@@ -13,7 +13,7 @@
         <form method="GET" action="{{ route('report.index') }}" class="mb-4 p-4">
             <div class="row">
                 <div class="col-md-4">
-                    <input type="text" name="search" class="form-control" placeholder="Search by task name" value="{{ request('search') }}">
+                    <input type="text" name="search" class="form-control pr-4 pl-2 py-2 border border-gray-300 rounded-md w-full max-w-[480px] flex flex-row items-center gap-3" placeholder="Search by task name" value="{{ request('search') }}">
                 </div>
                 <div class="col-md-3">
                     <select name="time_range" class="form-control">

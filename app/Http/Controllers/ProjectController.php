@@ -45,16 +45,42 @@ class ProjectController extends Controller
             $description = $task->description; // Menggunakan relasi yang sudah ada
 
             if ($description) {
-                // Menghitung jumlah file (gambar) dalam deskripsi task
-                $description_text = $description->text; // Sesuaikan dengan kolom yang menyimpan teks deskripsi
+                // Mengambil teks deskripsi dan mendecode JSON jika perlu
+                $description_data = json_decode($description->text, true); // Mengonversi string JSON menjadi array
 
-                // Hitung jumlah gambar menggunakan regex
-                $task->file_count = preg_match_all('/"image":"data:image\/[a-zA-Z]*;base64,[^"]+"/', $description_text);
+                // Inisialisasi penghitung
+                $image_count = 0;
+                $link_count = 0;
+
+              // Pastikan $description_data['ops'] bukan null atau tidak ada
+                if (isset($description_data['ops']) && is_array($description_data['ops'])) {
+                    foreach ($description_data['ops'] as $op) {
+                        // Cek jika ada elemen 'image' dan hitung
+                        if (isset($op['insert']['image'])) {
+                            $image_count++;
+                        }
+
+                        // Cek jika ada elemen 'link' dan hitung
+                        if (isset($op['attributes']['link'])) {
+                            $link_count++;
+                        }
+                    }
+                } else {
+                    // Tangani jika 'ops' tidak ada atau null
+                    // Misalnya, beri nilai default atau log pesan kesalahan
+                    $image_count = 0;
+                    $link_count = 0;
+                }
+
+                // Menjumlahkan file_count untuk gambar dan link
+                $task->file_count = $image_count + $link_count;
+
+
+
             } else {
                 $task->file_count = 0; // Jika tidak ada deskripsi, set file_count ke 0
             }
         }
-
 
 
 

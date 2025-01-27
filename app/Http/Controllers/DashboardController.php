@@ -36,14 +36,19 @@ class DashboardController extends Controller
     $projects = $projectsFromParticipants->merge($projectsFromCreator);
 
     // Ambil gambar creator dari proyek yang dibuat oleh pengguna
-    $creatorProjects = $projectsFromCreator->flatMap(function ($project) {
-        return $project->projectCreators->map(function ($creator) {
-            return $creator->pivot->creator_project;
-        });
-    });
+     $creatorProjects = $projectsFromCreator->flatMap(function ($project) {
+         return $project->projectCreators->map(function ($creator) {
+             return $creator->pivot->creator_project;
+         });
+     });
+     $projectIds = $projects->pluck('id');
+
+     $creatorProjectPict = ProjectUser::whereIn('project_id', $projectIds)->pluck('creator_project');
+
 
     // Ambil gambar creator dari user yang terlibat dalam proyek
-    $creatorPict = User::whereIn('id', $creatorProjects)->pluck('profile_pict')->first();
+    $creatorPict = User::whereIn('id', $creatorProjectPict)->pluck('profile_pict')->first();
+
 
     // Ambil gambar peserta untuk setiap proyek
     $projectParticipants = $projects->flatMap(function ($project) {

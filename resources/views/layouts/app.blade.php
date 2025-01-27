@@ -28,12 +28,20 @@
 
     <script defer src="https://cdn.jsdelivr.net/npm/flowbite@2.5.2/dist/flowbite.min.js"></script>
 
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    <script defer src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/popup.js'])
 </head>
 
 <body>
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+
     @php
         $currentUrl = url()->current();
         $loginUrl = url('login');
@@ -73,7 +81,7 @@
                     <button type="button" id="close-modal-btn" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">
                         Cancel
                     </button>
-                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    <button onclick="showConfirmation(event)" type="button" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                         Assign Project
                     </button>
                 </form>
@@ -84,6 +92,30 @@
             @yield('content')
         </main>
     </div>
+
+    <script>
+         function showConfirmation(event) {
+        event.preventDefault(); // Mencegah form dikirimkan langsung
+
+        // Menampilkan konfirmasi menggunakan SweetAlert
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Do you want to assign this project?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, assign it!',
+            cancelButtonText: 'No, cancel!',
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Jika pengguna mengonfirmasi, kirimkan form
+                const form = event.target.closest('form'); // Cari form yang terkait dengan tombol
+                if (form) {
+                    form.submit(); // Kirimkan form setelah konfirmasi
+                }
+            }
+        });
+    }
+    </script>
 
 
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
