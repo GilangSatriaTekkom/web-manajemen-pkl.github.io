@@ -110,11 +110,11 @@ class DashboardController extends Controller
         $userNames = User::whereIn('id', $creatorProjects)->pluck('profile_pict');
         $creatorPict = $userNames->first();
 
-        if ($creatorPict) {
-            $creatorPict = asset('storage/' . $creatorPict);
-        } else {
-            $creatorPict = asset('images/default-profile.png');
-        }
+        // if ($creatorPict) {
+        //     $creatorPict = asset('storage/' . $creatorPict);
+        // } else {
+        //     $creatorPict = asset('images/default-profile.png');
+        // }
 
         // Pass the $creatorPict to the view
         return view('layouts.dashboard', compact('projects', 'creatorPict'));

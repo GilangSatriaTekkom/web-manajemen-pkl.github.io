@@ -37,6 +37,8 @@ class ProjectController extends Controller
             ['id' => $boards[2]->id, 'title' => 'Done', 'cards' => $tasks->where('status', 'done')->values()],
         ];
 
+        $workedByIds = [];
+
         foreach ($tasks as $task) {
             // Menghitung jumlah komentar untuk setiap task
             $task->comment_count = Comment::where('task_id', $task->id)->count();
@@ -76,11 +78,19 @@ class ProjectController extends Controller
                 $task->file_count = $image_count + $link_count;
 
 
+                if ($task->workedBy) {
+                    $workedByIds[] = $task->workedBy->id; // Menambahkan ID ke array
+                } else {
+                    $workedByIds[] = null; // Jika tidak ada workedBy, simpan pesan khusus
+                }
+
 
             } else {
                 $task->file_count = 0; // Jika tidak ada deskripsi, set file_count ke 0
             }
         }
+
+
 
 
 
@@ -92,7 +102,9 @@ class ProjectController extends Controller
             'columns' => $columns,
             'project' => $project,
             'tasks' => $tasks,
-            'roles' => $roles
+            'userAssignedProfilePict' => $workedByIds,
+            'roles' => $roles,
+
 
         ]);
     }

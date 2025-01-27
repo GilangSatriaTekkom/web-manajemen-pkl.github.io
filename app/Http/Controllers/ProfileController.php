@@ -48,19 +48,25 @@ class ProfileController extends Controller
         if ($request->hasFile('profile_pict')) {
             $file = $request->file('profile_pict');
             if ($file) {
+                Log::info("message", ['message' => 'File uploaded: ' . $file->getClientOriginalName()]);
                 $fileExtension = $file->getClientOriginalExtension();
                 $fileName = uniqid() . '.' . $fileExtension;
-                $filePath = $file->storeAs('uploads/profile_pictures', $fileName, 'public');
+                $filePath = $file->storeAs('profile_pictures', $fileName, 'public'); // Menyimpan dengan path 'profile_pictures/'
 
                 // Hapus gambar lama jika ada perubahan
-                if ($user->profile_pict && $user->profile_pict !== $fileName) {
-                    Storage::disk('public')->delete('uploads/profile_pictures/' . $user->profile_pict);
+                if ($user->profile_pict && $user->profile_pict !== 'profile_pictures/' . $fileName) {
+                    Storage::disk('public')->delete($user->profile_pict); // Hapus file lama dengan path lengkap
                 }
 
-                // Update gambar di database
-                $user->profile_pict = $fileName;
+                // Update gambar di database dengan path lengkap
+                $user->profile_pict = 'profile_pictures/' . $fileName;
+                Log::info("message", ['message' => 'File uploaded: ' . $user->profile_pict]);
+
+                // Simpan perubahan ke database
+                $user->save();
             }
         }
+
 
         // Periksa perubahan dan simpan jika ada perubahan
         $updated = false; // Variabel untuk melacak apakah ada perubahan
@@ -110,6 +116,7 @@ class ProfileController extends Controller
         // Kirim respons ke frontend
         return redirect()->route('profile', ['id' => $user->id])->with('success', 'Profile updated successfully!');
     }
+
 
 
 

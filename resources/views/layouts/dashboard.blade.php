@@ -78,7 +78,7 @@
                 <div class="grid grid-cols-3 gap-4 mt-16 px-4">
                     @foreach ($projects as $project)
                         <div class="bg-white rounded shadow relative p-3">
-                            <button class="absolute size-5 top-2 right-2 text-gray-500 hover:text-gray-700 focus:outline-none" onclick="toggleDropdownProject({{ $project->id }})">
+                            {{-- <button class="absolute size-5 top-2 right-2 text-gray-500 hover:text-gray-700 focus:outline-none" onclick="toggleDropdownProject({{ $project->id }})">
                                 &#x22EE;
                             </button>
 
@@ -87,7 +87,7 @@
                                 <button class="block w-full text-left px-4 py-2 text-red-500 hover:bg-gray-200" onclick="deleteProject({{ $project->id }})">
                                     Delete
                                 </button>
-                            </div>
+                            </div> --}}
                             <a class="z-0" href="{{ route('project.show', $project->id) }}">
                                 <div id="dropdownDelete-{{ $project->id }}" class="dropdown-project absolute right-0 mt-2 w-32 bg-white rounded shadow hidden">
                                     <ul class="text-sm text-gray-700">
@@ -114,13 +114,13 @@
                                 <p>{{ $project->genre }}</p>
                                 <div class="flex flex-row justify-between items-center w-full">
                                     <p class="flex flex-row items-center">Created by:
-                                        <img class="w-[24px] h-[24px] rounded-full ml-1" src="{{ asset('storage/' . $creatorPict) }}" alt="">
+                                        <img class="w-[24px] h-[24px] rounded-full ml-1" src="{{ asset($creatorPict ? 'storage/' . $creatorPict : 'images/default-profile.png') }}" alt="">
                                     </p>
                                     <a href="{{ route('project.participants', $project->id) }}" class="flex items-center -space-x-2">
                                         @foreach ($project['participants'] as $index => $participant)
                                             @if ($index < 2)
                                                 <div class="w-8 h-8 rounded-full border-2 border-white overflow-hidden">
-                                                    <img src="{{ $participant['profile_image'] ? asset('storage/' . $participant['profile_image']) : asset('images/default-profile.png') }}" alt="Profile {{ $index + 1 }}" class="w-full h-full object-cover">
+                                                    <img src="{{ $participant['profile_pict'] ? asset('storage/' . $participant['profile_pict']) : asset('images/default-profile.png') }}" alt="Profile {{ $index + 1 }}" class="w-full h-full object-cover">
                                                 </div>
                                             @elseif ($index === 2)
                                                 <div class="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-sm font-semibold">

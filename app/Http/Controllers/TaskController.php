@@ -52,7 +52,9 @@ class TaskController extends Controller
             // Jika user ditemukan, ambil profile_picture dan username, jika tidak, set null
             $profilePicture = $userPict && $userPict->profile_pict
                 ? asset('storage/' . $userPict->profile_pict) // Jika ada, gunakan gambar dari database
-                : null; // Jika tidak ada, set null
+                : asset('images/default-profile.png'); // Jika tidak ada, set null
+
+            log::info('profilePicture', [$userPict]);
 
             $userName = $userPict ? $userPict->name : null; // Jika ada user, ambil nama, jika tidak, set null
 

@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", function () {
                             "rounded-full"
                         );
                         profileImage.src =
-                            comment.image_url || "/path/to/default/image.jpg";
+                            comment.image_url || "/images/default-profile.png";
                         profileImage.alt = "Profile Picture";
 
                         // Kontainer isi komentar
@@ -466,41 +466,74 @@ document.addEventListener("DOMContentLoaded", function () {
                     const assignedTo = document.getElementById("assignedTo");
                     assignedTo.innerHTML = ""; // Clear previous content
 
+                    // Menggunakan data yang dikirimkan dari server
                     const user =
-                        task.profile_picture && task.user_name
+                        task.profile_picture &&
+                        task.user_name &&
+                        task.profileUrl
                             ? {
                                   name: task.user_name,
                                   profilePicture: task.profile_picture,
+                                  profileUrl: task.profileUrl,
                               }
                             : null;
-                    // Pastikan task.worked_by berisi ID user yang mengerjakan task
-                    if (user) {
-                        // Menampilkan nama dan foto profil
-                        const userElement = document.createElement("div");
-                        userElement.classList.add("flex", "items-center");
 
-                        // Foto profil pengguna
+                    if (user) {
+                        // Menyusun elemen gambar profil
                         const userProfileImage = document.createElement("img");
-                        userProfileImage.src = user.profilePicture; // Sesuaikan path dengan path foto profil di server
-                        userProfileImage.alt = user.name;
+                        userProfileImage.src = user.profilePicture; // Menggunakan URL gambar dari user.profilePicture
+                        userProfileImage.alt = user.name; // Menambahkan alt dengan nama user
                         userProfileImage.classList.add(
                             "w-8",
                             "h-8",
                             "rounded-full",
                             "mr-2"
-                        );
+                        ); // Menambahkan kelas untuk styling
 
-                        // Nama pengguna
+                        // Menyusun elemen nama pengguna
                         const userName = document.createElement("span");
                         userName.classList.add("text-sm", "text-gray-600");
-                        userName.innerText = user.name;
+                        userName.innerText = user.name; // Menambahkan nama pengguna ke dalam elemen
 
-                        // Menambahkan elemen ke dalam container
-                        userElement.appendChild(userProfileImage);
-                        userElement.appendChild(userName);
-                        assignedTo.appendChild(userElement);
+                        // Menambahkan teks "Dikerjakan oleh"
+                        const assignedText = document.createElement("span");
+                        assignedText.classList.add(
+                            "text-sm",
+                            "text-gray-600",
+                            "mr-2"
+                        );
+                        assignedText.innerText = "Dikerjakan oleh:"; // Teks "Dikerjakan oleh"
+
+                        // Membungkus gambar profil dan nama pengguna dalam elemen <a> untuk membuatnya menjadi link
+                        const userLink = document.createElement("a");
+                        userLink.href = user.profileUrl; // Mengarahkan ke halaman profil pengguna
+                        userLink.classList.add(
+                            "flex",
+                            "items-center",
+                            "space-x-2",
+                            "p-2",
+                            "border",
+                            "border-gray-300",
+                            "rounded",
+                            "hover:bg-gray-100"
+                        ); // Menambahkan kelas untuk styling seperti button
+
+                        // Menyusun elemen yang akan ditampilkan
+                        const userElement = document.createElement("div");
+                        userElement.classList.add("flex", "items-center");
+
+                        // Menambahkan teks "Dikerjakan oleh", gambar profil, dan nama pengguna ke dalam link
+                        userLink.appendChild(assignedText);
+                        userLink.appendChild(userProfileImage);
+                        userLink.appendChild(userName);
+
+                        // Menambahkan elemen ke dalam container yang ada di halaman
+                        const assignedTo =
+                            document.getElementById("assignedTo");
+                        assignedTo.appendChild(userLink);
                     } else {
-                        assignedTo.innerHTML = "<p>Unassigned</p>";
+                        assignedTo.innerHTML =
+                            "<p>Belum ada yang mengerjakan</p>";
                     }
                 }
             })

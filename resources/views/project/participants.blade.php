@@ -33,19 +33,22 @@
             @forelse ($participants as $participant)
                 <li class="flex items-center justify-between py-4">
                     <div class="flex items-center">
-                        <img src="{{ $participant->profile_pict ? asset('storage/' . $participant->profile_pict) : asset('images/default-profile.png') }}" 
-                             alt="{{ $participant->name }}" 
+                        <img src="{{ $participant->profile_pict ? asset('storage/' . $participant->profile_pict) : asset('images/default-profile.png') }}"
+                             alt="{{ $participant->name }}"
                              class="w-10 h-10 rounded-full mr-4">
                         <span class="text-gray-800">{{ $participant->name }}</span>
                     </div>
-                    <form action="{{ route('project.removeParticipant', ['id' => $project->id, 'userId' => $participant->id]) }}" 
-                        method="POST" 
-                        onsubmit="return confirm('Are you sure you want to remove this participant?');">
-                      @csrf
-                      @method('DELETE')
-                      <button type="submit" class="text-red-500 hover:text-red-700 font-medium">Remove</button>
-                  </form>
-                  
+                    @if (auth()->user()->role == 'admin' || auth()->user()->role == 'pembimbing')
+                        <form action="{{ route('project.removeParticipant', ['id' => $project->id, 'userId' => $participant->id]) }}"
+                            method="POST"
+                            onsubmit="return confirm('Are you sure you want to remove this participant?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="text-red-500 hover:text-red-700 font-medium">Remove</button>
+                        </form>
+                    @endif
+                    </form>
+
                 </li>
             @empty
                 <li class="py-4 text-gray-500">No participants yet.</li>
@@ -54,6 +57,7 @@
     </div>
 
     <!-- Add Participant -->
+    @if (auth()->user()->role == 'admin' || auth()->user()->role == 'pembimbing')
     <div>
         <h2 class="text-xl font-semibold text-gray-700 mb-4">Add Participant</h2>
         <form action="{{ route('project.addParticipant', ['id' => $project->id]) }}" method="POST" class="flex items-center space-x-4">
@@ -67,10 +71,11 @@
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md shadow hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">Add</button>
         </form>
     </div>
+    @endif
 
     <!-- Back Link -->
     <div class="mt-6">
-        <a href="/dashboard" class="text-blue-600 hover:underline font-medium">&larr; Back to Dashboard</a>
+        <a href="{{ route('project.show', ['id' => request()->segment(2)]) }}" class="text-blue-600 hover:underline font-medium"><i class="fas fa-arrow-left mr-2"></i> Kembali</a>
     </div>
 </div>
 @endsection

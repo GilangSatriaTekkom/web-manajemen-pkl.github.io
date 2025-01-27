@@ -8,7 +8,13 @@
 @endif
 
 @section('content')
-
+     <!-- Tombol Kembali -->
+     <div class="mt-4">
+        <a href="{{ route('dashboard') }}" class="mx-[16px] text-blue-600 hover:underline text-sm font-medium">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Kembali
+        </a>
+    </div>
     <div class="">
         <div class="flex flex-row w-full justify-between container mx-auto mt-4">
             <h1 class="text-2xl font-bold mb-4">{{ $projectName }}</h1>
@@ -17,7 +23,7 @@
                     @if ($index < 2)
                         <div class="w-8 h-8 rounded-full border-2 border-white overflow-hidden">
                             <img
-                                src="{{ $participant['profile_image'] ? asset('storage/' . $participant['profile_image']) : asset('images/default-profile.png') }}"
+                                src="{{ $participant['profile_pict'] ? asset('storage/' . $participant['profile_pict']) : asset('images/default-profile.png') }}"
                                 alt="Profile {{ $index + 1 }}"
                                 class="w-full h-full object-cover">
                         </div>
@@ -30,6 +36,8 @@
                 @endforeach
             </a>
         </div>
+
+
     </div>
 
 
@@ -61,7 +69,7 @@
 
 
                     <!-- Cek apakah ada cards -->
-                    @if ($column['cards']->isNotEmpty())
+                    @if (is_a($column['cards'], \Illuminate\Support\Collection::class) && $column['cards']->isNotEmpty())
                     @foreach ($column['cards'] as $task)
                     <div id="task-{{ $task->id }}" class="bg-white p-2 rounded shadow mb-3 cursor-pointer"
                         onclick="openTaskPopup('{{ $task->id }}')">
@@ -153,7 +161,7 @@
                                 <hr class="my-2">
                             @endif
                              <!-- Kolom Peserta yang Mengerjakan Task -->
-                             @if($task->workedBy && $task->workedBy->isNotEmpty())
+                             @if (isset($task->workedBy) && is_a($task->workedBy, \Illuminate\Support\Collection::class) && $task->workedBy->isNotEmpty())
                              <div class="participants flex gap-2">
                                  @foreach($task->workedBy as $worker)
                                      <div class="participant">
@@ -193,8 +201,10 @@
                                             <div class="flex flex-row align-middle">
 
                                                 <h3 id="popupTitle" class="text-xl font-semibold"></h3>
-                                                <button class="ml-4 button text-[12px]" onclick="editTask()">Edit Task</button>
-                                                <button class="ml-1 button-alert text-[12px]" onclick="deleteTask()">Delete Task</button>
+                                                @if(in_array(auth()->user()->role, ['admin', 'pembimbing']))
+                                                    <button class="ml-4 button text-[12px]" onclick="editTask()">Edit Task</button>
+                                                    <button class="ml-1 button-alert text-[12px]" onclick="deleteTask()">Delete Task</button>
+                                                @endif
                                             </div>
                                             <button id="exitButton"
                                                 class="justify-end text-2xl text-gray-700 hover:text-gray-900 focus:outline-none">
@@ -202,11 +212,11 @@
                                             </button>
                                         </div>
 
-                                        @if (isset($columns[1]['cards']) && $columns[1]['cards']->isNotEmpty() && $columns[1]['cards'][0]->board_id !== 1)
+
                                             <div class="text-sm text-gray-600 mt-4" id="assignedTo">
 
                                             </div>
-                                        @endif
+
 
                                         <h4 class="mt-8 italic">Description</h4>
 
@@ -422,7 +432,7 @@
                         </div>
                     </div>
 
-                    <div id="modalImageBukti" class=" add-card hidden fixed inset-0 bg-gray-800 bg-opacity-50 items-center justify-center" onclick="closeModalOnOutsideClickImageSubmit(event)">
+                    <div id="modalImageBukti" class=" add-card hidden fixed inset-0 bg-gray-800 bg-opacity-50 items-center justify-center z-[150]" style="z-index: 150;" onclick="closeModalOnOutsideClickImageSubmit(event)">
                         <div class=" bg-white rounded-lg p-6 w-1/3 card-layout-scoll"  onclick="event.stopPropagation()">
                             <h2 class="text-xl font-semibold mb-4">Submit bukti pengerjaan</h2>
                             <form method="POST" enctype="multipart/form-data" id ="formImageBukti">
